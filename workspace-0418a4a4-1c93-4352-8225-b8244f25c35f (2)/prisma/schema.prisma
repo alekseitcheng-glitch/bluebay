@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Booking {
+  id            String   @id @default(cuid())
+  ref           String   @unique
+  status        String   @default("pending") // pending | confirmed | completed | cancelled
+  customerName  String
+  customerEmail String
+  customerPhone String
+  vehicleType   String   // sedan | suv | large
+  vehicleDesc   String
+  address       String
+  packageId     String   // silver | gold | platinum
+  packageName   String
+  addons        String   @default("[]") // JSON array of addon names
+  dateIso       String   // YYYY-MM-DD
+  timeSlot      String   // e.g. "9:00 AM"
+  notes         String   @default("")
+  promoCode     String?
+  discount      Int      @default(0) // discount in cents
+  estimatedCents Int     // total in cents before discount
+  finalCents    Int      // total in cents after discount
+  reminderSent  Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model PromoCode {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  label     String
+  discount  Int      // discount amount in cents
+  type      String   @default("fixed") // fixed | percent
+  maxUses   Int?
+  usedCount Int      @default(0)
+  expiresAt DateTime?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BlockedTime {
+  id        String   @id @default(cuid())
+  dateIso   String   // YYYY-MM-DD
+  timeSlot  String?  // null = entire day blocked, specific slot = that slot only
+  reason    String   @default("")
+  createdAt DateTime @default(now())
+}
+
+model AdminSession {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
