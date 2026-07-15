@@ -1,16 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import nodemailer from "nodemailer";
-
-const transporter = nodemailer.createTransport({
-  host: process.env.BREVO_SMTP_HOST,
-  port: Number(process.env.BREVO_SMTP_PORT) || 587,
-  secure: false,
-  auth: {
-    user: process.env.BREVO_SMTP_LOGIN,
-    pass: process.env.BREVO_SMTP_KEY,
-  },
-});
+import { transporter, senderEmail } from "@/lib/email";
 
 // POST /api/bookings/[id]/confirm — admin confirms a booking
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -41,8 +31,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const dateStr = new Date(updated.dateIso + "T12:00:00").toLocaleDateString("en-US", {
       weekday: "long", month: "long", day: "numeric",
     });
-    const senderEmail = process.env.BREVO_SENDER_EMAIL || "alekseitcheng@gmail.com";
-    
     const customerHtml = `
       <div style="font-family: 'Outfit', Arial, sans-serif; max-width:600px; margin:0 auto; background:#0B0F1A; color:#F8FAFC; border-radius:10px; overflow:hidden;">
         <div style="background:#3B82F6; padding:24px 28px; text-align:center;">

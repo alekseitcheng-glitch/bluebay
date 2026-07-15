@@ -1,16 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import nodemailer from "nodemailer";
-
-const transporter = nodemailer.createTransport({
-  host: process.env.BREVO_SMTP_HOST,
-  port: Number(process.env.BREVO_SMTP_PORT) || 587,
-  secure: false,
-  auth: {
-    user: process.env.BREVO_SMTP_LOGIN,
-    pass: process.env.BREVO_SMTP_KEY,
-  },
-});
+import { transporter, senderEmail } from "@/lib/email";
 
 // GET /api/send-reminders — sends day-before reminders
 // This should be called by a cron job once daily
@@ -29,7 +19,6 @@ export async function GET() {
       },
     });
 
-    const senderEmail = process.env.BREVO_SENDER_EMAIL || "alekseitcheng@gmail.com";
     let sentCount = 0;
 
     for (const booking of bookings) {

@@ -1,16 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import nodemailer from "nodemailer";
-
-// Brevo SMTP transporter (created once, reused)
-const transporter = nodemailer.createTransport({
-  host: process.env.BREVO_SMTP_HOST,
-  port: Number(process.env.BREVO_SMTP_PORT) || 587,
-  secure: false, // TLS via STARTTLS on port 587
-  auth: {
-    user: process.env.BREVO_SMTP_LOGIN,
-    pass: process.env.BREVO_SMTP_KEY,
-  },
-});
+import { transporter, senderEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,8 +10,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields: toEmail, subject" }, { status: 400 });
     }
 
-    const senderEmail = process.env.BREVO_SENDER_EMAIL || "alekseitcheng@gmail.com";
-
     const result = await transporter.sendMail({
       from: `"BlueBay Auto Care" <${senderEmail}>`,
       to: `"${toName || ""}" <${toEmail}>`,
@@ -31,10 +18,10 @@ export async function POST(req: NextRequest) {
       replyTo: senderEmail,
     });
 
-    console.log("[Brevo Email sent]", result.messageId);
+    console.log("[Email sent]", result.messageId);
     return NextResponse.json({ ok: true, messageId: result.messageId });
   } catch (err: any) {
-    console.error("[Brevo Email error]", err.message);
+    console.error("[Email error]", err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
