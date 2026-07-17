@@ -2,10 +2,11 @@
 
 /**
  * Reusable scroll/motion primitives built on framer-motion.
- * All degrade gracefully under prefers-reduced-motion (framer-motion respects
- * the `useReducedMotion` hook, applied via the MotionConfig in the root).
+ * Reduced motion is handled app-wide via <MotionConfig reducedMotion="user">
+ * in layout.tsx, which auto-strips transform/opacity animations. The Counter
+ * and TiltCard additionally short-circuit when the user prefers reduced motion.
  */
-import { motion, useScroll, useSpring, useInView, useMotionValue, useTransform, animate, type Variants } from "framer-motion";
+import { motion, useScroll, useSpring, useInView, useMotionValue, useTransform, animate, useReducedMotion, type Variants } from "framer-motion";
 import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from "react";
 
 // Shared easing — a confident, slightly fast deceleration (not the bouncy default).
@@ -121,17 +122,20 @@ export function Counter({
 }) {
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: "-40px" });
+  const reduce = useReducedMotion();
   const [val, setVal] = useState(0);
 
   useEffect(() => {
     if (!inView) return;
+    // Reduced motion: snap to final value instantly, no count-up.
+    if (reduce) { setVal(to); return; }
     const controls = animate(0, to, {
       duration,
       ease: EASE,
       onUpdate: (v) => setVal(v),
     });
     return () => controls.stop();
-  }, [inView, to, duration]);
+  }, [inView, to, duration, reduce]);
 
   return (
     <span ref={ref} style={style}>
@@ -157,6 +161,7 @@ export function TiltCard({
   max?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
   const rx = useMotionValue(0);
   const ry = useMotionValue(0);
   const gx = useMotionValue(50);
@@ -164,6 +169,7 @@ export function TiltCard({
   const [active, setActive] = useState(false);
 
   function onMove(e: React.MouseEvent) {
+    if (reduce) return; // no tilt under reduced-motion preference
     const el = ref.current;
     if (!el) return;
     const r = el.getBoundingClientRect();

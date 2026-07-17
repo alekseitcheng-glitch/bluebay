@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Outfit, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import { MotionConfig } from "framer-motion";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -36,8 +37,12 @@ export default function RootLayout({
         className={`${outfit.variable} ${playfair.variable} antialiased`}
         style={{ background: "#090C14", fontFamily: "'Outfit', sans-serif" }}
       >
-        {children}
-        <Toaster />
+        {/* reducedMotion="user" makes all framer-motion animations app-wide
+            respect the user's OS/browser reduce-motion setting automatically. */}
+        <MotionConfig reducedMotion="user">
+          {children}
+          <Toaster />
+        </MotionConfig>
       </body>
     </html>
   );

@@ -142,14 +142,6 @@ a { cursor: pointer; }
   --glow-gold: 0 0 0 1px rgba(201,168,76,0.25), 0 18px 50px -18px rgba(201,168,76,0.5);
 }
 
-/* Frosted-glass surface */
-.bb-glass {
-  background: linear-gradient(180deg, rgba(20,24,32,0.72), rgba(15,18,25,0.72));
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
-  border: 1px solid rgba(255,255,255,0.06);
-}
-
 /* Subtle film grain overlay — applied to hero/CTA via ::after */
 .bb-grain::after {
   content: "";
@@ -177,29 +169,23 @@ a { cursor: pointer; }
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-12px); }
 }
-@keyframes bb-shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-@keyframes bb-orbit {
-  0% { transform: rotate(0deg) translateX(0); }
-  50% { transform: rotate(0deg) translateX(20px); }
-  100% { transform: rotate(0deg) translateX(0); }
-}
 .bb-float { animation: bb-float 7s ease-in-out infinite; }
 
 /* Text selection */
 ::selection { background: rgba(201,168,76,0.32); color: #fff; }
 
-/* Button hover lift — applied via .bb-btn-lift (inline styles can't do :hover) */
+/* Button hover lift — applied via .bb-btn-lift (inline styles can't do :hover).
+   No !important: enabled buttons set transform:undefined inline, so this wins
+   by source order. Keeps framer-motion transforms authoritative if a button
+   is ever wrapped in a motion component. */
 .bb-btn-lift:not([disabled]):hover {
-  transform: translateY(-2px) !important;
+  transform: translateY(-2px);
   filter: brightness(1.08);
 }
 .bb-btn-lift:not([disabled]):active {
-  transform: translateY(0) !important;
+  transform: translateY(0);
 }
-.bb-navlink:hover { color: #E8ECF2 !important; }
+.bb-navlink:hover { color: #E8ECF2; }
 
 /* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
