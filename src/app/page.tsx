@@ -1,11 +1,14 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { Reveal, StaggerGroup, StaggerItem, Counter, TiltCard, ScrollProgress, Parallax } from "@/lib/motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { EASE } from "@/lib/motion";
 
 /* ─────────────────────────────────────────────────────────────
    BLUEBAY AUTO CARE — Mobile Detailing SF
    Full-scale React SPA: Home · Services · Booking · Loyalty · Admin · Contact
-   Email via Brevo SMTP · SQLite via Prisma
+   Email via Resend SMTP · Postgres (Neon) via Prisma
 ───────────────────────────────────────────────────────────── */
 
 // ── DATA ────────────────────────────────────────────────────────
@@ -83,6 +86,15 @@ const C = {
   purple:  "#8A7EB8",
   red:     "#E05A5A",
   amber:   "#D4A24E",
+  // ── premium depth + glow (new) ──
+  shadow:    "var(--shadow-card)",
+  shadowLift:"var(--shadow-lift)",
+  glowBlue:  "var(--glow-blue)",
+  glowGold:  "var(--glow-gold)",
+  display:   "var(--font-display)",
+  radiusLg:  14,
+  radiusXl:  20,
+  glassBg:   "linear-gradient(180deg, rgba(20,24,32,0.72), rgba(15,18,25,0.72))",
 };
 
 // ── SVG ICONS ────────────────────────────────────────────────────
@@ -182,30 +194,34 @@ function Chip({ children, color = C.blue, style: sx = {} }: { children: React.Re
 function Btn({ children, onClick, variant = "primary", size = "md", style: sx = {}, href, disabled, type }: { children: React.ReactNode; onClick?: () => void; variant?: string; size?: string; style?: React.CSSProperties; href?: string; disabled?: boolean; type?: "button" | "submit" }) {
   const sizes: Record<string, React.CSSProperties> = {
     xs: { padding: "4px 10px", fontSize: 10 },
-    sm: { padding: "7px 16px", fontSize: 11 },
-    md: { padding: "10px 22px", fontSize: 12 },
-    lg: { padding: "13px 28px", fontSize: 13 },
+    sm: { padding: "8px 16px", fontSize: 11 },
+    md: { padding: "11px 24px", fontSize: 13 },
+    lg: { padding: "15px 32px", fontSize: 14 },
   };
   const variants: Record<string, React.CSSProperties> = {
-    primary:   { background: C.blue, color: "#fff", border: "none" },
-    gold:      { background: C.gold, color: "#090C14", border: "none" },
-    outline:   { background: "transparent", color: C.white, border: `1px solid ${C.border2}` },
+    primary:   { background: `linear-gradient(180deg, ${C.blueLt}, ${C.blue})`, color: "#fff", border: "none", boxShadow: "0 10px 28px -12px rgba(74,138,244,0.7)" },
+    gold:      { background: `linear-gradient(180deg, ${C.goldLt}, ${C.gold})`, color: "#090C14", border: "none", boxShadow: "0 10px 30px -12px rgba(201,168,76,0.65)" },
+    outline:   { background: "rgba(232,236,242,0.02)", color: C.white, border: `1px solid ${C.border2}`, backdropFilter: "blur(6px)" },
     ghost:     { background: "transparent", color: C.muted, border: `1px solid ${C.border}` },
     danger:    { background: C.red + "18", color: C.red, border: `1px solid ${C.red}35` },
     success:   { background: C.green + "18", color: C.green, border: `1px solid ${C.green}35` },
   };
   const base: React.CSSProperties = {
     cursor: disabled ? "not-allowed" : "pointer",
-    borderRadius: 4,
+    borderRadius: 999,
     fontFamily: "'Outfit', sans-serif",
-    fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" as const,
+    fontWeight: 600, letterSpacing: 0.2,
     textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center",
-    transition: "all 0.15s ease",
+    transition: "transform 0.25s cubic-bezier(0.22,1,0.36,1), box-shadow 0.25s ease, background 0.25s ease",
     opacity: disabled ? 0.35 : 1,
+    transform: disabled ? "none" : undefined,
     ...sizes[size], ...variants[variant], ...sx,
   };
-  if (href) return <a href={href} style={base}>{children}</a>;
-  return <button type={type} onClick={disabled ? undefined : onClick} style={base}>{children}</button>;
+  // Hover lift via onMouseEnter/Leave (inline styles can't target :hover).
+  const hoverOn = () => { if (!disabled) document.body.style.cursor = "pointer"; };
+  const hoverOff = () => { document.body.style.cursor = "default"; };
+  if (href) return <a href={href} style={base} onMouseEnter={hoverOn} onMouseLeave={hoverOff} className="bb-btn-lift">{children}</a>;
+  return <button type={type} onClick={disabled ? undefined : onClick} style={base} onMouseEnter={hoverOn} onMouseLeave={hoverOff} className="bb-btn-lift">{children}</button>;
 }
 
 function Input({ label, ...props }: { label?: string; [key: string]: any }) {
@@ -238,39 +254,44 @@ function Textarea({ label, ...props }: { label?: string; [key: string]: any }) {
   );
 }
 
-function Card({ children, style: sx = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
+function Card({ children, style: sx = {}, glass = false }: { children: React.ReactNode; style?: React.CSSProperties; glass?: boolean }) {
   return (
     <div style={{
-      background: C.card,
-      border: `1px solid ${C.border}`,
-      borderRadius: 6,
+      background: glass ? C.glassBg : C.card,
+      border: `1px solid ${glass ? "rgba(255,255,255,0.06)" : C.border}`,
+      borderRadius: C.radiusLg,
+      boxShadow: C.shadow,
+      position: "relative",
       ...sx
     }}>{children}</div>
   );
 }
 
-function SectionTitle({ chip, title, sub, light = true, center = true }: { chip?: string; title: string; sub?: string; light?: boolean; center?: boolean }) {
+function SectionTitle({ chip, title, sub, light = true, center = true, display = true }: { chip?: string; title: string; sub?: string; light?: boolean; center?: boolean; display?: boolean }) {
   return (
-    <div style={{ textAlign: center ? "center" : "left", marginBottom: 44 }}>
-      {chip && <div style={{ marginBottom: 10 }}><Chip>{chip}</Chip></div>}
+    <div style={{ textAlign: center ? "center" : "left", marginBottom: 48 }}>
+      {chip && <div style={{ marginBottom: 12 }}><Chip>{chip}</Chip></div>}
       <h2 style={{
-        fontFamily: "'Outfit',sans-serif", fontWeight: 700,
-        fontSize: "clamp(26px,3.5vw,40px)", lineHeight: 1.15,
-        color: light ? C.white : C.bg, margin: "0 0 12px", letterSpacing: -0.3,
+        fontFamily: display ? C.display : "'Outfit',sans-serif", fontWeight: 600,
+        fontSize: "clamp(28px,4vw,46px)", lineHeight: 1.1,
+        color: light ? C.white : C.bg, margin: "0 0 14px", letterSpacing: -0.5,
         whiteSpace: "pre-line",
       }}>{title}</h2>
-      {sub && <p style={{ color: light ? C.muted : C.dim, fontSize: 14, lineHeight: 1.7, maxWidth: 480, margin: center ? "0 auto" : undefined }}>{sub}</p>}
+      <div style={{ width: center ? 56 : 40, height: 3, borderRadius: 2, background: `linear-gradient(90deg, ${C.gold}, ${C.blue})`, margin: center ? "0 auto 16px" : "0 0 16px" }} />
+      {sub && <p style={{ color: light ? C.muted : C.dim, fontSize: 15, lineHeight: 1.7, maxWidth: 520, margin: center ? "0 auto" : undefined }}>{sub}</p>}
     </div>
   );
 }
 
-function FeatureIcon({ children }: { children: React.ReactNode }) {
+function FeatureIcon({ children, color }: { children: React.ReactNode; color?: string }) {
+  const c = color || C.blue;
   return (
     <div style={{
-      width: 34, height: 34, borderRadius: 6,
-      background: C.blueDim + "30", border: `1px solid ${C.blue}20`,
+      width: 40, height: 40, borderRadius: 10,
+      background: `linear-gradient(180deg, ${c}26, ${c}0D)`, border: `1px solid ${c}30`,
       display: "flex", alignItems: "center", justifyContent: "center",
-      color: C.blueLt, flexShrink: 0,
+      color: c, flexShrink: 0,
+      boxShadow: `0 8px 20px -10px ${c}66`,
     }}>{children}</div>
   );
 }
@@ -288,234 +309,296 @@ function Navbar({ page, setPage }: { page: string; setPage: (p: string) => void 
   return (
     <nav style={{
       position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000,
-      background: scrolled ? C.bg + "EE" : "transparent",
-      borderBottom: scrolled ? `1px solid ${C.border}` : "none",
-      backdropFilter: scrolled ? "blur(12px)" : "none",
-      transition: "all 0.2s ease",
+      background: scrolled ? "rgba(9,12,20,0.72)" : "transparent",
+      borderBottom: scrolled ? `1px solid ${C.border}` : "1px solid transparent",
+      backdropFilter: scrolled ? "blur(16px) saturate(140%)" : "none",
+      transition: "background 0.3s ease, border-color 0.3s ease",
     }}>
-      <div style={{ maxWidth: 1120, margin: "0 auto", padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div onClick={() => setPage("Home")} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 9 }}>
-          <img src="/logo.png" alt="BlueBay Auto Care" style={{ width: 32, height: 32, borderRadius: 6 }} />
+      <div style={{ maxWidth: 1140, margin: "0 auto", padding: "0 24px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <motion.div
+          initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, ease: EASE }}
+          onClick={() => setPage("Home")} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}
+        >
+          <img src="/logo.png" alt="BlueBay Auto Care" style={{ width: 34, height: 34, borderRadius: 8, filter: "drop-shadow(0 4px 12px rgba(74,138,244,0.35))" }} />
           <div>
-            <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 700, fontSize: 14, color: C.white, lineHeight: 1, letterSpacing: 1 }}>BLUEBAY</div>
-            <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 400, fontSize: 8, color: C.dim, letterSpacing: 2.5, textTransform: "uppercase" as const }}>AUTO CARE</div>
+            <div style={{ fontFamily: C.display, fontWeight: 700, fontSize: 17, color: C.white, lineHeight: 1, letterSpacing: 0 }}>BlueBay</div>
+            <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 500, fontSize: 8, color: C.dim, letterSpacing: 3, textTransform: "uppercase" as const }}>AUTO CARE</div>
           </div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 1 }}>
-          {links.map(l => (
-            <button key={l} onClick={() => setPage(l)} style={{
-              background: page === l ? C.blue + "12" : "none",
-              border: "none", cursor: "pointer",
-              fontFamily: "'Outfit',sans-serif", fontWeight: page === l ? 600 : 400,
-              fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase" as const,
-              color: page === l ? C.blueLt : C.muted,
-              padding: "6px 12px", borderRadius: 4,
-              transition: "all 0.15s",
-            }}>{l}</button>
-          ))}
-          <Btn href="tel:+14157028468" variant="gold" size="sm" style={{ marginLeft: 12 }}>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, ease: EASE, delay: 0.1 }}
+          style={{ display: "flex", alignItems: "center", gap: 2 }}
+        >
+          {links.map(l => {
+            const active = page === l;
+            return (
+              <button key={l} onClick={() => setPage(l)} style={{
+                background: "none", border: "none", cursor: "pointer",
+                fontFamily: "'Outfit',sans-serif", fontWeight: active ? 600 : 400,
+                fontSize: 13, letterSpacing: 0.1,
+                color: active ? C.white : C.muted,
+                padding: "8px 14px", borderRadius: 8,
+                position: "relative",
+                transition: "color 0.2s ease",
+              }} className="bb-navlink">
+                {l}
+                {active && (
+                  <motion.div layoutId="nav-underline" style={{ position: "absolute", bottom: 2, left: "25%", right: "25%", height: 2, borderRadius: 2, background: `linear-gradient(90deg, ${C.gold}, ${C.blueLt})` }} />
+                )}
+              </button>
+            );
+          })}
+          <Btn href="tel:+14157028468" variant="gold" size="sm" style={{ marginLeft: 14 }}>
             (415) 702-8468
           </Btn>
-        </div>
+        </motion.div>
       </div>
     </nav>
   );
 }
 
 // ── HOME PAGE ────────────────────────────────────────────────────
+function TestimonialCarousel() {
+  const [i, setI] = useState(0);
+  const t = TESTIMONIALS[i];
+  return (
+    <Card glass style={{ padding: 32, overflow: "hidden" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+        <Stars n={t.stars} />
+        <span style={{ fontSize: 11, color: C.dim, letterSpacing: 0.5 }}>{i + 1} / {TESTIMONIALS.length}</span>
+      </div>
+      <AnimatePresence mode="wait">
+        <motion.blockquote
+          key={i}
+          initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.4, ease: EASE }}
+          style={{ margin: 0, padding: 0 }}
+        >
+          <p style={{ color: C.white, fontSize: 16, lineHeight: 1.65, margin: "0 0 20px", fontFamily: C.display, fontStyle: "italic", fontWeight: 500 }}>
+            &ldquo;{t.text}&rdquo;
+          </p>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <div style={{ fontWeight: 600, color: C.blueLt, fontSize: 13 }}>{t.name}</div>
+              <div style={{ color: C.dim, fontSize: 12 }}>{t.vehicle}</div>
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={() => setI((i - 1 + TESTIMONIALS.length) % TESTIMONIALS.length)} style={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 999, width: 34, height: 34, cursor: "pointer", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center" }}><IconChevronLeft /></button>
+              <button onClick={() => setI((i + 1) % TESTIMONIALS.length)} style={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 999, width: 34, height: 34, cursor: "pointer", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center" }}><IconChevronRight /></button>
+            </div>
+          </div>
+        </motion.blockquote>
+      </AnimatePresence>
+    </Card>
+  );
+}
+
 function HomePage({ setPage }: { setPage: (p: string) => void }) {
   return (
     <div>
       {/* HERO */}
-      <div style={{
+      <div className="bb-grain" style={{
         minHeight: "100vh", position: "relative", overflow: "hidden",
-        background: C.bg,
+        background: `radial-gradient(1100px 600px at 78% 12%, rgba(74,138,244,0.16), transparent 60%), radial-gradient(900px 500px at 12% 80%, rgba(201,168,76,0.10), transparent 55%), ${C.bg}`,
         display: "flex", alignItems: "center",
       }}>
-        <div style={{ maxWidth: 1120, margin: "0 auto", padding: "110px 24px 70px", position: "relative", zIndex: 1, display: "grid", gridTemplateColumns: "1.3fr 0.7fr", gap: 48, alignItems: "center" }}>
-          <div>
-            <Chip color={C.dim} style={{ marginBottom: 20 }}>Mobile Service / San Francisco</Chip>
-            <h1 style={{
-              fontFamily: "'Outfit',sans-serif", fontWeight: 700,
-              fontSize: "clamp(36px,5.5vw,64px)", color: C.white,
-              lineHeight: 1, margin: "0 0 20px", letterSpacing: -1,
-            }}>
-              WE COME<br/>
-              <span style={{ color: C.blueLt }}>TO YOU</span>
-            </h1>
-            <p style={{ color: C.muted, fontSize: 16, lineHeight: 1.7, marginBottom: 32, maxWidth: 420 }}>
-              Professional mobile detailing at your doorstep. Eco-friendly products, premium tools -- we make your car shine like new, anywhere in SF.
-            </p>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 44 }}>
-              <Btn onClick={() => setPage("Booking")} variant="gold" size="lg">Request Appointment</Btn>
-              <Btn href="tel:+14157028468" variant="outline" size="lg">Call (415) 702-8468</Btn>
-            </div>
-            <div style={{ display: "flex", gap: 28 }}>
-              {[
-                { icon: <IconMobile />, t: "Mobile Service", s: "We Come to You" },
-                { icon: <IconLeaf />, t: "Eco-Friendly", s: "Safe Products" },
-                { icon: <IconShield />, t: "Satisfaction", s: "Guaranteed" },
-              ].map(({ icon, t, s }) => (
-                <div key={t} style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
-                  <FeatureIcon>{icon}</FeatureIcon>
-                  <div>
-                    <div style={{ fontFamily:"'Outfit',sans-serif", fontWeight:600, color:C.white, fontSize:12 }}>{t}</div>
-                    <div style={{ color:C.dim, fontSize:11 }}>{s}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <Card style={{ padding: 24 }}>
-            <div style={{ textAlign: "center", marginBottom: 18 }}>
-              <Chip color={C.gold}>Starting from $110</Chip>
-              <h3 style={{ fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:18, color:C.white, margin:"10px 0 3px" }}>Choose Your Package</h3>
-              <p style={{ color:C.dim, fontSize:12, margin:0 }}>Silver / Gold / Platinum</p>
-            </div>
-            {PACKAGES.map(pkg => (
-              <div key={pkg.id} onClick={() => setPage("Services")} style={{
-                display:"flex", justifyContent:"space-between", alignItems:"center",
-                padding:"10px 12px", borderRadius:5, marginBottom:6, cursor:"pointer",
-                background: pkg.id === "gold" ? pkg.accent + "0C" : "transparent",
-                border: `1px solid ${pkg.id === "gold" ? pkg.accent + "30" : C.border}`,
-                transition:"all 0.15s",
-              }}>
-                <div>
-                  <div style={{ fontFamily:"'Outfit',sans-serif", fontWeight:600, color: pkg.accent, fontSize:13 }}>
-                    {pkg.tier} {pkg.badge && <span style={{ fontSize:8, background:pkg.accent+"18", padding:"2px 7px", borderRadius:3, marginLeft:5, fontWeight:600 }}>{pkg.badge}</span>}
-                  </div>
-                  <div style={{ color:C.dim, fontSize:11, marginTop:1 }}>{pkg.sub}</div>
-                </div>
-                <div style={{ textAlign:"right" }}>
-                  <div style={{ fontWeight:700, color:C.white, fontSize:14 }}>from ${pkg.prices.sedan}</div>
-                  <div style={{ color:C.dim, fontSize:10 }}>sedan</div>
-                </div>
-              </div>
+        {/* Floating decorative orbs (parallax) */}
+        <Parallax speed={0.25}>
+          <div className="bb-float" style={{ position: "absolute", top: "16%", right: "8%", width: 220, height: 220, borderRadius: "50%", background: "radial-gradient(circle, rgba(74,138,244,0.22), transparent 70%)", filter: "blur(20px)" }} />
+        </Parallax>
+        <Parallax speed={0.4}>
+          <div className="bb-float" style={{ position: "absolute", bottom: "12%", left: "6%", width: 260, height: 260, borderRadius: "50%", background: "radial-gradient(circle, rgba(201,168,76,0.14), transparent 70%)", filter: "blur(28px)", animationDelay: "-3s" }} />
+        </Parallax>
+
+        <div style={{ maxWidth: 1140, margin: "0 auto", padding: "120px 24px 80px", position: "relative", zIndex: 1, width: "100%" }}>
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE }}>
+            <Chip color={C.blue} style={{ marginBottom: 24 }}>San Francisco · Mobile Detailing</Chip>
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: EASE, delay: 0.08 }}
+            style={{
+              fontFamily: C.display, fontWeight: 600,
+              fontSize: "clamp(42px,7vw,84px)", color: C.white,
+              lineHeight: 1.02, margin: "0 0 24px", letterSpacing: -1.5, maxWidth: 820,
+            }}
+          >
+            Detailing that meets you{" "}
+            <span style={{ fontStyle: "italic", fontWeight: 500 }} className="bb-gradient-text">where you park.</span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: EASE, delay: 0.2 }}
+            style={{ color: C.muted, fontSize: 18, lineHeight: 1.65, marginBottom: 36, maxWidth: 540 }}
+          >
+            Premium hand detailing brought to your home, office, or curbside across San Francisco. Eco-friendly products, zero water waste, and results you can see in the reflection.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: EASE, delay: 0.32 }}
+            style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 56 }}
+          >
+            <Btn onClick={() => setPage("Booking")} variant="gold" size="lg">Book your detail</Btn>
+            <Btn href="tel:+14157028468" variant="outline" size="lg">(415) 702-8468</Btn>
+          </motion.div>
+
+          {/* Animated stats row */}
+          <StaggerGroup stagger={0.12} style={{ display: "flex", gap: 0, flexWrap: "wrap" }}>
+            {[
+              { stat: <Counter to={500} suffix="+" />, label: "Cars detailed" },
+              { stat: <Counter to={4.9} decimals={1} suffix="★" />, label: "Average rating" },
+              { stat: <Counter to={100} suffix="%" />, label: "Mobile service" },
+              { stat: <Counter to={0} suffix="gal" />, label: "Water wasted" },
+            ].map(({ stat, label }, i) => (
+              <StaggerItem key={label} style={{ flex: "1 1 140px", minWidth: 140, padding: "20px 0", borderTop: `1px solid ${C.border}`, borderRight: i < 3 ? `1px solid ${C.border}` : "none" }}>
+                <div style={{ fontFamily: C.display, fontWeight: 600, fontSize: "clamp(26px,3.5vw,40px)", color: C.white, lineHeight: 1, marginBottom: 6, letterSpacing: -0.5 }}>{stat}</div>
+                <div style={{ color: C.dim, fontSize: 12, letterSpacing: 0.3, textTransform: "uppercase" as const }}>{label}</div>
+              </StaggerItem>
             ))}
-            <Btn onClick={() => setPage("Booking")} variant="gold" size="md" style={{ width:"100%", marginTop:8 }}>Request Appointment</Btn>
-          </Card>
+          </StaggerGroup>
         </div>
       </div>
 
       {/* TRUST BAR */}
-      <div style={{ background: C.card, borderTop:`1px solid ${C.border}`, borderBottom:`1px solid ${C.border}`, padding:"14px 24px" }}>
-        <div style={{ maxWidth:1120, margin:"0 auto", display:"flex", justifyContent:"space-around", flexWrap:"wrap", gap:10 }}>
-          {["Mobile Service","Eco-Friendly Products","Card / Cash / PayPal / Venmo","Satisfaction Guaranteed","All San Francisco"].map(t => (
-            <span key={t} style={{ fontFamily:"'Outfit',sans-serif", fontWeight:500, fontSize:11, color:C.dim, letterSpacing:0.3 }}>{t}</span>
+      <div style={{ background: C.card, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: "18px 24px" }}>
+        <Reveal style={{ maxWidth: 1140, margin: "0 auto", display: "flex", justifyContent: "space-around", flexWrap: "wrap", gap: 10 }}>
+          {["Mobile Service", "Eco-Friendly Products", "Card · Cash · PayPal · Venmo", "Satisfaction Guaranteed", "All of San Francisco"].map(t => (
+            <span key={t} style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 500, fontSize: 12, color: C.dim, letterSpacing: 0.4 }}>{t}</span>
           ))}
-        </div>
+        </Reveal>
       </div>
 
       {/* PACKAGES SECTION */}
-      <div style={{ background: C.bg, padding:"72px 24px" }}>
-        <div style={{ maxWidth:1120, margin:"0 auto" }}>
-          <SectionTitle chip="Packages" title="Detailing Packages" sub="Professional service packages for every vehicle and budget." />
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
+      <div style={{ background: C.bg, padding: "96px 24px" }}>
+        <div style={{ maxWidth: 1140, margin: "0 auto" }}>
+          <Reveal>
+            <SectionTitle chip="Packages" title={"Three tiers of shine"} sub="From a refresh to a full transformation — pick the level of care your car deserves." />
+          </Reveal>
+          <StaggerGroup stagger={0.12} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 18 }}>
             {PACKAGES.map(pkg => (
-              <Card key={pkg.id} style={{
-                padding:0, overflow:"hidden", position:"relative",
-                border: pkg.id === "gold" ? `1px solid ${pkg.accent}40` : undefined,
-              }}>
-                {pkg.badge && (
-                  <div style={{
-                    position:"absolute", top:12, right:-24,
-                    background: pkg.accent, color: pkg.id === "gold" ? C.bg : C.white,
-                    fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:8, letterSpacing:1,
-                    padding:"3px 32px", transform:"rotate(45deg)", transformOrigin:"center",
-                  }}>{pkg.badge}</div>
-                )}
-                <div style={{ padding:"22px 22px 0", borderBottom:`1px solid ${C.border}` }}>
-                  <div style={{ fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:22, color: pkg.accent, letterSpacing:-0.3 }}>{pkg.tier}</div>
-                  <div style={{ color:C.dim, fontSize:12, marginBottom:16 }}>{pkg.sub}</div>
-                  <div style={{ display:"flex", flexDirection:"column", gap:7, marginBottom:18 }}>
-                    {VEHICLE_TYPES.map(v => (
-                      <div key={v.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                        <span style={{ color:C.muted, fontSize:12 }}>{v.label}</span>
-                        <span style={{ fontWeight:700, color:C.white, fontSize:14 }}>${pkg.prices[v.id]}</span>
+              <StaggerItem key={pkg.id}>
+                <TiltCard style={{ height: "100%" }} max={5}>
+                  <Card style={{
+                    padding: 0, overflow: "hidden", position: "relative", height: "100%",
+                    border: pkg.id === "gold" ? `1px solid ${pkg.accent}50` : `1px solid ${C.border}`,
+                    boxShadow: pkg.id === "gold" ? C.glowGold : C.shadow,
+                  }} glass={false}>
+                    {pkg.badge && (
+                      <div style={{
+                        position: "absolute", top: 16, right: 16,
+                        background: pkg.accent + "22", color: pkg.accent,
+                        fontWeight: 700, fontSize: 9, letterSpacing: 1,
+                        padding: "5px 12px", borderRadius: 999, textTransform: "uppercase" as const,
+                        border: `1px solid ${pkg.accent}40`,
+                      }}>{pkg.badge}</div>
+                    )}
+                    <div style={{ padding: "28px 26px 0", borderBottom: `1px solid ${C.border}` }}>
+                      <div style={{ fontFamily: C.display, fontWeight: 600, fontSize: 26, color: pkg.accent, letterSpacing: -0.5 }}>{pkg.tier}</div>
+                      <div style={{ color: C.dim, fontSize: 13, marginBottom: 18 }}>{pkg.sub}</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 22 }}>
+                        {VEHICLE_TYPES.map(v => (
+                          <div key={v.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ color: C.muted, fontSize: 13 }}>{v.label}</span>
+                            <span style={{ fontWeight: 700, color: C.white, fontSize: 15, fontFamily: C.display }}>${pkg.prices[v.id]}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </div>
-                <div style={{ padding:"16px 22px 22px" }}>
-                  <ul style={{ margin:0, padding:0, listStyle:"none", display:"flex", flexDirection:"column", gap:7 }}>
-                    {pkg.features.map(f => (
-                      <li key={f} style={{ display:"flex", gap:8, alignItems:"flex-start", color:C.muted, fontSize:12, lineHeight:1.4 }}>
-                        <span style={{ color:pkg.accent, flexShrink:0, marginTop:2, display:"flex" }}><IconCheck /></span>{f}
-                      </li>
-                    ))}
-                  </ul>
-                  <Btn onClick={() => setPage("Booking")} variant={pkg.id === "gold" ? "gold" : "ghost"} size="md" style={{ width:"100%", marginTop:18 }}>Book Now</Btn>
-                </div>
-              </Card>
+                    </div>
+                    <div style={{ padding: "20px 26px 26px" }}>
+                      <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 9 }}>
+                        {pkg.features.map(f => (
+                          <li key={f} style={{ display: "flex", gap: 9, alignItems: "flex-start", color: C.muted, fontSize: 13, lineHeight: 1.45 }}>
+                            <span style={{ color: pkg.accent, flexShrink: 0, marginTop: 2, display: "flex" }}><IconCheck /></span>{f}
+                          </li>
+                        ))}
+                      </ul>
+                      <Btn onClick={() => setPage("Booking")} variant={pkg.id === "gold" ? "gold" : "outline"} size="md" style={{ width: "100%", marginTop: 22 }}>Book {pkg.tier}</Btn>
+                    </div>
+                  </Card>
+                </TiltCard>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerGroup>
 
           {/* Add-ons */}
-          <div style={{ marginTop:36 }}>
-            <h3 style={{ fontFamily:"'Outfit',sans-serif", fontWeight:600, fontSize:16, color:C.white, textAlign:"center", marginBottom:16 }}>Add-On Services</h3>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:8, justifyContent:"center" }}>
+          <Reveal delay={0.1} style={{ marginTop: 40 }}>
+            <h3 style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 600, fontSize: 18, color: C.white, textAlign: "center", marginBottom: 18 }}>Add-on services</h3>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
               {ADDONS.map(a => (
-                <Card key={a.name} style={{ padding:"9px 16px", display:"flex", alignItems:"center", gap:10 }}>
+                <Card key={a.name} style={{ padding: "11px 18px", display: "flex", alignItems: "center", gap: 12 }}>
                   <div>
-                    <div style={{ fontWeight:600, color:C.white, fontSize:12 }}>{a.name}</div>
-                    <div style={{ color:C.gold, fontSize:11, fontWeight:600 }}>{a.price}</div>
+                    <div style={{ fontWeight: 600, color: C.white, fontSize: 13 }}>{a.name}</div>
+                    <div style={{ color: C.gold, fontSize: 11, fontWeight: 600, marginTop: 1 }}>{a.price}</div>
                   </div>
                 </Card>
               ))}
             </div>
-          </div>
+          </Reveal>
         </div>
       </div>
 
       {/* WHY CHOOSE SECTION */}
-      <div style={{ background: C.card, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding:"72px 24px" }}>
-        <div style={{ maxWidth:1120, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr", gap:56, alignItems:"center" }}>
+      <div style={{ background: C.card, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: "96px 24px", position: "relative", overflow: "hidden" }}>
+        <Parallax speed={0.3}>
+          <div style={{ position: "absolute", top: "-10%", right: "-5%", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(74,138,244,0.08), transparent 70%)", filter: "blur(40px)" }} />
+        </Parallax>
+        <div style={{ maxWidth: 1140, margin: "0 auto", display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 64, alignItems: "center", position: "relative", zIndex: 1 }}>
           <div>
-            <SectionTitle chip="Why BlueBay" title={"Professional Care\nAt Your Doorstep"} sub="We bring premium auto detailing directly to your location in San Francisco." center={false} />
-            <div style={{ display:"flex", flexWrap:"wrap", gap:7, marginBottom:28 }}>
-              {["Premium Products","Mobile Service","Eco-Friendly","Pay After Service"].map(t => (
+            <Reveal>
+              <SectionTitle chip="Why BlueBay" title={"The detail your car\nremembers."} sub="We bring a full detailing studio to your block — no driving, no waiting rooms, no water running down the gutter." center={false} />
+            </Reveal>
+            <Reveal delay={0.1} style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 32 }}>
+              {["Premium Products", "Mobile Service", "Eco-Friendly", "Pay After Service"].map(t => (
                 <Chip key={t} color={C.blue}>{t}</Chip>
               ))}
-            </div>
-            <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
+            </Reveal>
+            <StaggerGroup stagger={0.1} style={{ display: "flex", flexDirection: "column", gap: 22 }}>
               {[
-                { icon: <IconShield />, t: "Professional & Reliable", d: "Mobile detailing service at your doorstep. We treat every vehicle with care." },
-                { icon: <IconLeaf />, t: "Eco-Friendly Products", d: "We use eco-friendly cleaning products and premium detailing tools for outstanding results." },
-                { icon: <IconClock />, t: "Flexible Scheduling", d: "We come to your home or office at your convenience. Book online or call us." },
-                { icon: <IconStar filled />, t: "Satisfaction Guaranteed", d: "We make your car shine like new. Your complete satisfaction is our priority." },
+                { icon: <IconShield />, t: "Trained, insured detailers", d: "Every vehicle is handled by someone who treats it like their own. Careful, thorough, on time." },
+                { icon: <IconLeaf />, t: "Waterless & eco-friendly", d: "Our products lift grime without a hose. Better for your paint, better for the Bay." },
+                { icon: <IconClock />, t: "Built around your day", d: "Home, office, or curbside — book a window that fits your schedule, not ours." },
+                { icon: <IconStar filled />, t: "Results, guaranteed", d: "If it's not right, we'll make it right. Your satisfaction is the whole point." },
               ].map(({ icon, t, d }) => (
-                <div key={t} style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
-                  <FeatureIcon>{icon}</FeatureIcon>
-                  <div>
-                    <div style={{ fontFamily:"'Outfit',sans-serif", fontWeight:600, color:C.white, fontSize:13, marginBottom:2 }}>{t}</div>
-                    <div style={{ color:C.dim, fontSize:12, lineHeight:1.6 }}>{d}</div>
+                <StaggerItem key={t}>
+                  <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+                    <FeatureIcon>{icon}</FeatureIcon>
+                    <div>
+                      <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 600, color: C.white, fontSize: 14, marginBottom: 3 }}>{t}</div>
+                      <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.6 }}>{d}</div>
+                    </div>
                   </div>
-                </div>
+                </StaggerItem>
               ))}
-            </div>
+            </StaggerGroup>
           </div>
-          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-            {TESTIMONIALS.slice(0,2).map(t => (
-              <Card key={t.name} style={{ padding:22 }}>
-                <Stars n={t.stars} />
-                <p style={{ color:C.muted, fontSize:13, lineHeight:1.7, margin:"8px 0" }}>&ldquo;{t.text}&rdquo;</p>
-                <div style={{ fontWeight:600, color:C.blueLt, fontSize:12 }}>{t.name}</div>
-                <div style={{ color:C.dim, fontSize:11 }}>{t.vehicle}</div>
-              </Card>
-            ))}
-          </div>
+
+          {/* Testimonial carousel */}
+          <Reveal delay={0.15}>
+            <TestimonialCarousel />
+          </Reveal>
         </div>
       </div>
 
       {/* CTA BANNER */}
-      <div style={{ background: C.bg, borderTop:`1px solid ${C.border}`, borderBottom:`1px solid ${C.border}`, padding:"56px 24px", textAlign:"center" }}>
-        <div style={{ maxWidth:600, margin:"0 auto" }}>
-          <h2 style={{ fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:"clamp(22px,3.5vw,36px)", color:C.white, margin:"0 0 10px", letterSpacing:-0.3 }}>Ready for a Spotless Ride?</h2>
-          <p style={{ color:C.muted, fontSize:14, marginBottom:28 }}>Request an appointment today and we will confirm your time. Payment collected after your appointment -- card, cash, PayPal, or Venmo.</p>
-          <div style={{ display:"flex", gap:10, justifyContent:"center", flexWrap:"wrap" }}>
-            <Btn onClick={() => setPage("Booking")} variant="gold" size="lg">Request Appointment</Btn>
-            <Btn href="tel:+14157028468" variant="outline" size="lg">Call (415) 702-8468</Btn>
-          </div>
+      <div className="bb-grain" style={{
+        position: "relative", overflow: "hidden",
+        background: `radial-gradient(800px 300px at 50% 120%, rgba(201,168,76,0.18), transparent 60%), ${C.bg}`,
+        borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: "80px 24px", textAlign: "center",
+      }}>
+        <Parallax speed={0.2}>
+          <div style={{ position: "absolute", top: "-30%", left: "20%", width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle, rgba(74,138,244,0.10), transparent 70%)", filter: "blur(30px)" }} />
+        </Parallax>
+        <div style={{ maxWidth: 640, margin: "0 auto", position: "relative", zIndex: 1 }}>
+          <Reveal>
+            <h2 style={{ fontFamily: C.display, fontWeight: 600, fontSize: "clamp(30px,5vw,52px)", color: C.white, margin: "0 0 14px", letterSpacing: -0.8, lineHeight: 1.08 }}>
+              Your car, <span style={{ fontStyle: "italic" }} className="bb-gradient-text">like the day you bought it.</span>
+            </h2>
+            <p style={{ color: C.muted, fontSize: 15, marginBottom: 32, lineHeight: 1.7 }}>Request a time and we'll confirm within the day. You pay after the job is done — card, cash, PayPal, or Venmo.</p>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+              <Btn onClick={() => setPage("Booking")} variant="gold" size="lg">Request appointment</Btn>
+              <Btn href="tel:+14157028468" variant="outline" size="lg">Call us</Btn>
+            </div>
+          </Reveal>
         </div>
       </div>
 
@@ -530,65 +613,73 @@ function ServicesPage({ setPage }: { setPage: (p: string) => void }) {
   const [vehicleType, setVehicleType] = useState("sedan");
 
   return (
-    <div style={{ paddingTop:60, background:C.bg, minHeight:"100vh" }}>
-      <div style={{ background: C.card, borderBottom: `1px solid ${C.border}`, padding:"48px 24px 64px" }}>
-        <div style={{ maxWidth:1120, margin:"0 auto" }}>
-          <SectionTitle chip="Our Services" title="Everything Your Car Needs" sub="Choose a package and vehicle type to see your price." />
-          <div style={{ display:"flex", justifyContent:"center", gap:6, marginBottom:36 }}>
+    <div style={{ paddingTop:64, background:C.bg, minHeight:"100vh" }}>
+      <div style={{ padding:"72px 24px 80px" }}>
+        <div style={{ maxWidth:1140, margin:"0 auto" }}>
+          <Reveal>
+            <SectionTitle chip="Our Services" title={"The right care\nfor your ride."} sub="Pick a tier, pick your vehicle — see your price instantly." />
+          </Reveal>
+          <Reveal delay={0.1} style={{ display:"flex", justifyContent:"center", gap:8, marginBottom:40 }}>
             {VEHICLE_TYPES.map(v => (
               <button key={v.id} onClick={() => setVehicleType(v.id)} style={{
-                padding:"9px 20px", borderRadius:4, cursor:"pointer",
-                fontFamily:"'Outfit',sans-serif", fontWeight:600, fontSize:12,
-                background: vehicleType === v.id ? C.blue : "transparent",
-                color: vehicleType === v.id ? "#fff" : C.muted, border: vehicleType === v.id ? "1px solid transparent" : `1px solid ${C.border}`,
-                transition:"all 0.15s",
+                padding:"10px 22px", borderRadius:999, cursor:"pointer",
+                fontFamily:"'Outfit',sans-serif", fontWeight:600, fontSize:13,
+                background: vehicleType === v.id ? `linear-gradient(180deg, ${C.blueLt}, ${C.blue})` : "transparent",
+                color: vehicleType === v.id ? "#fff" : C.muted, border: vehicleType === v.id ? "none" : `1px solid ${C.border}`,
+                boxShadow: vehicleType === v.id ? "0 8px 24px -10px rgba(74,138,244,0.5)" : "none",
+                transition:"all 0.3s cubic-bezier(0.22,1,0.36,1)",
               }}>{v.label}</button>
             ))}
-          </div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16, marginBottom:48 }}>
+          </Reveal>
+          <StaggerGroup stagger={0.1} style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(280px,1fr))", gap:20, marginBottom:56 }}>
             {PACKAGES.map(pkg => (
-              <Card key={pkg.id} style={{
-                padding:0, overflow:"hidden", cursor:"pointer",
-                border: selectedPkg === pkg.id ? `1px solid ${pkg.accent}` : `1px solid ${C.border}`,
-                transition:"all 0.15s",
-              }}
+              <StaggerItem key={pkg.id}>
+                <Card style={{
+                  padding:0, overflow:"hidden", cursor:"pointer",
+                  border: selectedPkg === pkg.id ? `1px solid ${pkg.accent}60` : `1px solid ${C.border}`,
+                  boxShadow: selectedPkg === pkg.id ? `0 0 0 1px ${pkg.accent}18, 0 20px 48px -18px ${pkg.accent}44` : C.shadow,
+                  transition:"box-shadow 0.3s ease, border-color 0.3s ease",
+                }}
                 onClick={() => setSelectedPkg(pkg.id)}>
-                <div style={{ padding:"20px 20px 12px", background: selectedPkg === pkg.id ? pkg.accent + "08" : "transparent" }}>
-                  {pkg.badge && <Chip color={pkg.accent} style={{ marginBottom:7, fontSize:8 }}>{pkg.badge}</Chip>}
-                  <div style={{ fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:22, color:pkg.accent }}>{pkg.tier}</div>
-                  <div style={{ color:C.dim, fontSize:12, marginBottom:12 }}>{pkg.sub}</div>
-                  <div style={{ fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:34, color:C.white, lineHeight:1 }}>
-                    ${pkg.prices[vehicleType as keyof typeof pkg.prices]}
-                    <span style={{ fontSize:13, color:C.dim, fontWeight:400 }}> / visit</span>
+                  <div style={{ padding:"24px 24px 16px", background: selectedPkg === pkg.id ? pkg.accent + "0A" : "transparent" }}>
+                    {pkg.badge && <Chip color={pkg.accent} style={{ marginBottom:8, fontSize:8 }}>{pkg.badge}</Chip>}
+                    <div style={{ fontFamily:C.display, fontWeight:600, fontSize:24, color:pkg.accent, letterSpacing:-0.3 }}>{pkg.tier}</div>
+                    <div style={{ color:C.dim, fontSize:13, marginBottom:14 }}>{pkg.sub}</div>
+                    <div style={{ fontFamily:C.display, fontWeight:600, fontSize:38, color:C.white, lineHeight:1, letterSpacing:-1 }}>
+                      ${pkg.prices[vehicleType as keyof typeof pkg.prices]}
+                      <span style={{ fontSize:14, color:C.dim, fontWeight:400, fontFamily:"'Outfit',sans-serif", letterSpacing:0 }}> / visit</span>
+                    </div>
                   </div>
-                </div>
-                <div style={{ padding:"12px 20px 20px", borderTop:`1px solid ${C.border}` }}>
-                  <ul style={{ margin:0, padding:0, listStyle:"none", display:"flex", flexDirection:"column", gap:7 }}>
-                    {pkg.features.map(f => (
-                      <li key={f} style={{ display:"flex", gap:8, color:C.muted, fontSize:12, lineHeight:1.4 }}>
-                        <span style={{ color:pkg.accent, display:"flex", marginTop:1 }}><IconCheck /></span>{f}
-                      </li>
-                    ))}
-                  </ul>
-                  <Btn onClick={() => setPage("Booking")} variant={selectedPkg===pkg.id ? (pkg.id==="gold"?"gold":"primary") : "ghost"} size="sm" style={{ width:"100%", marginTop:16 }}>
-                    Book {pkg.tier}
-                  </Btn>
-                </div>
-              </Card>
+                  <div style={{ padding:"16px 24px 24px", borderTop:`1px solid ${C.border}` }}>
+                    <ul style={{ margin:0, padding:0, listStyle:"none", display:"flex", flexDirection:"column", gap:8 }}>
+                      {pkg.features.map(f => (
+                        <li key={f} style={{ display:"flex", gap:9, color:C.muted, fontSize:13, lineHeight:1.45 }}>
+                          <span style={{ color:pkg.accent, display:"flex", marginTop:1 }}><IconCheck /></span>{f}
+                        </li>
+                      ))}
+                    </ul>
+                    <Btn onClick={() => setPage("Booking")} variant={selectedPkg===pkg.id ? (pkg.id==="gold"?"gold":"primary") : "outline"} size="md" style={{ width:"100%", marginTop:20 }}>
+                      Book {pkg.tier}
+                    </Btn>
+                  </div>
+                </Card>
+              </StaggerItem>
             ))}
-          </div>
-          <SectionTitle chip="Add-Ons" title="Enhance Your Detail" sub="Add any of these services to any package." />
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(240px,1fr))", gap:10 }}>
+          </StaggerGroup>
+          <Reveal>
+            <SectionTitle chip="Add-Ons" title="Make it yours." sub="Add any of these to your package at checkout." />
+          </Reveal>
+          <Reveal delay={0.08} style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(240px,1fr))", gap:12 }}>
             {ADDONS.map(a => (
-              <Card key={a.name} style={{ padding:"14px 18px", display:"flex", alignItems:"center", gap:12 }}>
+              <Card key={a.name} style={{ padding:"16px 20px", display:"flex", alignItems:"center", gap:14 }}>
                 <div style={{ flex:1 }}>
                   <div style={{ fontWeight:600, color:C.white, fontSize:13 }}>{a.name}</div>
-                  <div style={{ color:C.gold, fontWeight:600, fontSize:12, marginTop:1 }}>{a.price}</div>
+                  <div style={{ color:C.gold, fontWeight:600, fontSize:12, marginTop:2 }}>{a.price}</div>
                 </div>
                 <Btn onClick={() => setPage("Booking")} variant="ghost" size="sm">Add</Btn>
               </Card>
             ))}
-          </div>
+          </Reveal>
         </div>
       </div>
     </div>
@@ -1106,26 +1197,34 @@ function BookingPage() {
 
 // ── LOYALTY PAGE ─────────────────────────────────────────────────
 function LoyaltyPage({ setPage }: { setPage: (p: string) => void }) {
+  const tierColors = [C.muted, C.gold, C.blueLt];
   return (
-    <div style={{ paddingTop:60, background:C.bg, minHeight:"100vh" }}>
-      <div style={{ background: C.card, borderBottom: `1px solid ${C.border}`, padding:"48px 24px 64px" }}>
+    <div style={{ paddingTop:64, background:C.bg, minHeight:"100vh" }}>
+      <div style={{ padding:"72px 24px 80px" }}>
         <div style={{ maxWidth:960, margin:"0 auto" }}>
-          <SectionTitle chip="Loyalty" title="BlueBay Rewards" sub="Earn points on every detail and unlock exclusive perks." />
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
-            {LOYALTY_TIERS.map(tier => (
-              <Card key={tier.name} style={{ padding:22, textAlign:"center" }}>
-                <h3 style={{ fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:18, color:C.white, margin:"0 0 3px" }}>{tier.name}</h3>
-                <p style={{ color:C.dim, fontSize:11, margin:"0 0 16px" }}>{tier.min}+ points{tier.max ? ` (up to ${tier.max})` : ""}</p>
-                <ul style={{ margin:0, padding:0, listStyle:"none", textAlign:"left", display:"flex", flexDirection:"column", gap:7 }}>
-                  {tier.perks.map(p => (
-                    <li key={p} style={{ display:"flex", gap:7, color:C.muted, fontSize:12 }}>
-                      <span style={{ color:C.blue, display:"flex", marginTop:1 }}><IconCheck /></span>{p}
-                    </li>
-                  ))}
-                </ul>
-              </Card>
+          <Reveal>
+            <SectionTitle chip="Loyalty" title={"Earn while\nyou shine."} sub="Every detail earns points. Unlock better perks the more you come back." />
+          </Reveal>
+          <StaggerGroup stagger={0.12} style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(260px,1fr))", gap:20 }}>
+            {LOYALTY_TIERS.map((tier, idx) => (
+              <StaggerItem key={tier.name}>
+                <Card glass style={{ padding:28, textAlign:"center", border: `1px solid ${tierColors[idx]}30`, boxShadow: idx === 2 ? `0 0 0 1px ${tierColors[idx]}20, 0 20px 48px -16px ${tierColors[idx]}44` : C.shadow }}>
+                  <h3 style={{ fontFamily:C.display, fontWeight:600, fontSize:20, color:tierColors[idx], margin:"0 0 4px" }}>{tier.name}</h3>
+                  <p style={{ color:C.dim, fontSize:12, margin:"0 0 20px" }}>{tier.min}+ points{tier.max ? ` (up to ${tier.max})` : ""}</p>
+                  <ul style={{ margin:0, padding:0, listStyle:"none", textAlign:"left", display:"flex", flexDirection:"column", gap:10 }}>
+                    {tier.perks.map(p => (
+                      <li key={p} style={{ display:"flex", gap:9, color:C.muted, fontSize:13, lineHeight:1.45 }}>
+                        <span style={{ color:tierColors[idx], display:"flex", marginTop:1 }}><IconCheck /></span>{p}
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerGroup>
+          <Reveal delay={0.2} style={{ textAlign:"center", marginTop:40 }}>
+            <Btn onClick={() => setPage("Booking")} variant="gold" size="lg">Start earning points</Btn>
+          </Reveal>
         </div>
       </div>
     </div>
@@ -1544,32 +1643,36 @@ function ContactPage() {
   };
 
   return (
-    <div style={{ paddingTop:60, background:C.bg, minHeight:"100vh" }}>
-      <div style={{ background: C.card, borderBottom: `1px solid ${C.border}`, padding:"48px 24px 64px" }}>
+    <div style={{ paddingTop:64, background:C.bg, minHeight:"100vh" }}>
+      <div style={{ padding:"72px 24px 80px" }}>
         <div style={{ maxWidth:580, margin:"0 auto" }}>
-          <SectionTitle chip="Contact" title="Get in Touch" sub="Questions? Reach out anytime." />
-          <Card style={{ padding:28 }}>
-            {sent ? (
-              <div style={{ textAlign:"center", padding:18 }}>
-                <div style={{ width:42, height:42, borderRadius:"50%", background:C.green+"14", border:`1px solid ${C.green}30`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 12px", color:C.green }}>
-                  <IconCheck />
+          <Reveal>
+            <SectionTitle chip="Contact" title="Let's talk." sub="Questions, feedback, or just want to say hi — we're here." />
+          </Reveal>
+          <Reveal delay={0.1}>
+            <Card glass style={{ padding:32 }}>
+              {sent ? (
+                <motion.div initial={{ opacity:0, scale:0.96 }} animate={{ opacity:1, scale:1 }} transition={{ duration:0.4, ease:EASE }} style={{ textAlign:"center", padding:24 }}>
+                  <div style={{ width:48, height:48, borderRadius:"50%", background:C.green+"14", border:`1px solid ${C.green}30`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 14px", color:C.green, boxShadow:"0 12px 30px -12px rgba(61,187,138,0.5)" }}>
+                    <IconCheck />
+                  </div>
+                  <h3 style={{ fontFamily:C.display, fontWeight:600, color:C.green, fontSize:18, marginBottom:4 }}>Message sent</h3>
+                  <p style={{ color:C.dim, fontSize:13 }}>We'll get back to you within a day.</p>
+                </motion.div>
+              ) : (
+                <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+                  <Input label="Name" value={form.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm({...form, name:e.target.value})} />
+                  <Input label="Email" type="email" value={form.email} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm({...form, email:e.target.value})} />
+                  <Textarea label="Message" value={form.message} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setForm({...form, message:e.target.value})} />
+                  <Btn onClick={handleSubmit} variant="gold" size="md" style={{ width:"100%" }}>Send message</Btn>
+                  <div style={{ textAlign:"center", marginTop:8 }}>
+                    <p style={{ color:C.dim, fontSize:12, margin:"0 0 4px" }}>Or reach us directly:</p>
+                    <a href="tel:+14157028468" style={{ color:C.blueLt, fontWeight:700, fontSize:17, fontFamily:"'Outfit',sans-serif", textDecoration:"none" }}>(415) 702-8468</a>
+                  </div>
                 </div>
-                <h3 style={{ fontFamily:"'Outfit',sans-serif", fontWeight:700, color:C.green, fontSize:16 }}>Message Sent</h3>
-                <p style={{ color:C.dim, fontSize:13 }}>We'll get back to you soon.</p>
-              </div>
-            ) : (
-              <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-                <Input label="Name" value={form.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm({...form, name:e.target.value})} />
-                <Input label="Email" type="email" value={form.email} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm({...form, email:e.target.value})} />
-                <Textarea label="Message" value={form.message} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setForm({...form, message:e.target.value})} />
-                <Btn onClick={handleSubmit} variant="gold" size="md" style={{ width:"100%" }}>Send Message</Btn>
-                <div style={{ textAlign:"center", marginTop:5 }}>
-                  <p style={{ color:C.dim, fontSize:11, margin:"0 0 3px" }}>Or call/text us directly:</p>
-                  <a href="tel:+14157028468" style={{ color:C.blueLt, fontWeight:700, fontSize:16, fontFamily:"'Outfit',sans-serif" }}>(415) 702-8468</a>
-                </div>
-              </div>
-            )}
-          </Card>
+              )}
+            </Card>
+          </Reveal>
         </div>
       </div>
     </div>
@@ -1579,31 +1682,31 @@ function ContactPage() {
 // ── FOOTER ───────────────────────────────────────────────────────
 function Footer({ setPage }: { setPage: (p: string) => void }) {
   return (
-    <div style={{ background: C.card, borderTop:`1px solid ${C.border}`, padding:"44px 24px 24px" }}>
-      <div style={{ maxWidth:1120, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:36 }}>
+    <div style={{ background: C.card, borderTop:`1px solid ${C.border}`, padding:"48px 24px 24px" }}>
+      <div style={{ maxWidth:1140, margin:"0 auto", display:"grid", gridTemplateColumns:"1.2fr 0.8fr 1fr", gap:40 }}>
         <div>
-          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
-            <img src="/logo.png" alt="BlueBay" style={{ width:28, height:28, borderRadius:5 }} />
+          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
+            <img src="/logo.png" alt="BlueBay" style={{ width:30, height:30, borderRadius:8, filter:"drop-shadow(0 2px 8px rgba(74,138,244,0.25))" }} />
             <div>
-              <div style={{ fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:13, color:C.white }}>BLUEBAY</div>
-              <div style={{ fontFamily:"'Outfit',sans-serif", fontWeight:400, fontSize:7, color:C.dim, letterSpacing:2 }}>AUTO CARE</div>
+              <div style={{ fontFamily:C.display, fontWeight:700, fontSize:16, color:C.white }}>BlueBay</div>
+              <div style={{ fontFamily:"'Outfit',sans-serif", fontWeight:500, fontSize:8, color:C.dim, letterSpacing:3, textTransform:"uppercase" as const }}>Auto Care</div>
             </div>
           </div>
-          <p style={{ color:C.dim, fontSize:11, lineHeight:1.7 }}>Professional mobile auto detailing serving San Francisco. Eco-friendly products, premium tools, at your doorstep.</p>
+          <p style={{ color:C.muted, fontSize:13, lineHeight:1.7, maxWidth:300 }}>Professional mobile detailing across San Francisco. Eco-friendly, waterless, at your doorstep.</p>
         </div>
         <div>
-          <h4 style={{ fontFamily:"'Outfit',sans-serif", fontWeight:700, color:C.white, fontSize:12, marginBottom:12, letterSpacing:0.5, textTransform:"uppercase" as const }}>Quick Links</h4>
+          <h4 style={{ fontFamily:"'Outfit',sans-serif", fontWeight:600, color:C.white, fontSize:11, marginBottom:14, letterSpacing:1, textTransform:"uppercase" as const }}>Pages</h4>
           {[...["Home","Services","Booking","Loyalty","Contact"], "Admin"].map(l => (
-            <button key={l} onClick={() => { setPage(l); window.scrollTo(0,0); }} style={{ display:"block", background:"none", border:"none", cursor:"pointer", color: l === "Admin" ? C.subtle : C.dim, fontSize:l === "Admin" ? 10 : 12, fontFamily:"'Outfit',sans-serif", fontWeight:400, padding:"2px 0", transition:"color 0.15s" }}>{l}</button>
+            <button key={l} onClick={() => { setPage(l); window.scrollTo(0,0); }} className="bb-navlink" style={{ display:"block", background:"none", border:"none", cursor:"pointer", color: l === "Admin" ? C.subtle : C.muted, fontSize:l === "Admin" ? 11 : 13, fontFamily:"'Outfit',sans-serif", fontWeight:400, padding:"3px 0", transition:"color 0.2s", borderRadius:4 }}>{l}</button>
           ))}
         </div>
         <div>
-          <h4 style={{ fontFamily:"'Outfit',sans-serif", fontWeight:700, color:C.white, fontSize:12, marginBottom:12, letterSpacing:0.5, textTransform:"uppercase" as const }}>Contact</h4>
-          <a href="tel:+14157028468" style={{ display:"block", color:C.blueLt, fontSize:14, fontWeight:700, fontFamily:"'Outfit',sans-serif", marginBottom:5 }}>(415) 702-8468</a>
-          <span style={{ color:C.dim, fontSize:11 }}>San Francisco, CA</span>
+          <h4 style={{ fontFamily:"'Outfit',sans-serif", fontWeight:600, color:C.white, fontSize:11, marginBottom:14, letterSpacing:1, textTransform:"uppercase" as const }}>Contact</h4>
+          <a href="tel:+14157028468" className="bb-navlink" style={{ display:"block", color:C.blueLt, fontSize:16, fontWeight:700, fontFamily:"'Outfit',sans-serif", marginBottom:6, textDecoration:"none" }}>(415) 702-8468</a>
+          <p style={{ color:C.muted, fontSize:13, margin:0 }}>San Francisco, CA</p>
         </div>
       </div>
-      <div style={{ maxWidth:1120, margin:"24px auto 0", paddingTop:14, borderTop:`1px solid ${C.border}`, textAlign:"center", fontSize:10, color:C.dim }}>
+      <div style={{ maxWidth:1140, margin:"28px auto 0", paddingTop:18, borderTop:`1px solid ${C.border}`, textAlign:"center", fontSize:11, color:C.dim }}>
         &copy; {new Date().getFullYear()} BlueBay Auto Care. All rights reserved.
       </div>
     </div>
@@ -1625,6 +1728,7 @@ export default function App() {
 
   return (
     <div>
+      <ScrollProgress />
       <Navbar page={page} setPage={go} />
       {page === "Home"     && <HomePage    setPage={go} />}
       {page === "Services" && <ServicesPage setPage={go} />}

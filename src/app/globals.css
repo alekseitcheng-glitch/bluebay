@@ -129,7 +129,80 @@ input, textarea, select { font-family: 'Outfit', sans-serif; }
 input::placeholder, textarea::placeholder { color: rgba(90,99,116,0.5); }
 input:focus, textarea:focus, select:focus { border-color: #4A8AF4 !important; }
 a { cursor: pointer; }
-::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #090C14; }
-::-webkit-scrollbar-thumb { background: #1C2029; border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: #252A35; }
+::-webkit-scrollbar-thumb { background: #252A35; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #4A8AF4; }
+
+/* ── Premium depth + glow utilities ─────────────────────────── */
+:root {
+  --shadow-card: 0 1px 0 rgba(255,255,255,0.04) inset, 0 18px 40px -20px rgba(0,0,0,0.75);
+  --shadow-lift: 0 1px 0 rgba(255,255,255,0.06) inset, 0 28px 60px -24px rgba(0,0,0,0.85);
+  --glow-blue: 0 0 0 1px rgba(74,138,244,0.18), 0 18px 50px -18px rgba(74,138,244,0.45);
+  --glow-gold: 0 0 0 1px rgba(201,168,76,0.25), 0 18px 50px -18px rgba(201,168,76,0.5);
+}
+
+/* Frosted-glass surface */
+.bb-glass {
+  background: linear-gradient(180deg, rgba(20,24,32,0.72), rgba(15,18,25,0.72));
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Subtle film grain overlay — applied to hero/CTA via ::after */
+.bb-grain::after {
+  content: "";
+  position: absolute; inset: 0; pointer-events: none;
+  opacity: 0.035; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Gradient text fill for big headlines */
+.bb-gradient-text {
+  background: linear-gradient(110deg, #6BA3FF 0%, #E8ECF2 45%, #DDBE66 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+
+/* Top highlight line that reads as light catching a surface edge */
+.bb-edge::before {
+  content: ""; position: absolute; top: 0; left: 14%; right: 14%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+  pointer-events: none;
+}
+
+/* Animations */
+@keyframes bb-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+@keyframes bb-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes bb-orbit {
+  0% { transform: rotate(0deg) translateX(0); }
+  50% { transform: rotate(0deg) translateX(20px); }
+  100% { transform: rotate(0deg) translateX(0); }
+}
+.bb-float { animation: bb-float 7s ease-in-out infinite; }
+
+/* Text selection */
+::selection { background: rgba(201,168,76,0.32); color: #fff; }
+
+/* Button hover lift — applied via .bb-btn-lift (inline styles can't do :hover) */
+.bb-btn-lift:not([disabled]):hover {
+  transform: translateY(-2px) !important;
+  filter: brightness(1.08);
+}
+.bb-btn-lift:not([disabled]):active {
+  transform: translateY(0) !important;
+}
+.bb-navlink:hover { color: #E8ECF2 !important; }
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+  .bb-float { animation: none !important; }
+}
