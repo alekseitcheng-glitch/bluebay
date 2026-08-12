@@ -60,3 +60,18 @@ model AdminSession {
   createdAt DateTime @default(now())
   expiresAt DateTime
 }
+
+model GiftCard {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  amountCents     Int      // original amount purchased
+  balanceCents    Int      // remaining balance
+  status          String   @default("active") // active | exhausted
+  purchaserName   String
+  purchaserEmail  String
+  recipientName   String
+  recipientEmail  String
+  message         String   @default("")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}

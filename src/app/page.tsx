@@ -305,7 +305,7 @@ function Navbar({ page, setPage }: { page: string; setPage: (p: string) => void 
     return () => window.removeEventListener("scroll", h);
   }, []);
 
-  const links = ["Home","Services","Booking","Loyalty","Contact"];
+  const links = ["Home","Services","Booking","GiftCards","Loyalty","Contact"];
   return (
     <nav style={{
       position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000,
@@ -331,6 +331,7 @@ function Navbar({ page, setPage }: { page: string; setPage: (p: string) => void 
         >
           {links.map(l => {
             const active = page === l;
+            const label = l === "GiftCards" ? "Gift Cards" : l;
             return (
               <button key={l} onClick={() => setPage(l)} style={{
                 background: "none", border: "none", cursor: "pointer",
@@ -341,7 +342,7 @@ function Navbar({ page, setPage }: { page: string; setPage: (p: string) => void 
                 position: "relative",
                 transition: "color 0.2s ease",
               }} className="bb-navlink">
-                {l}
+                {label}
                 {active && (
                   <motion.div layoutId="nav-underline" style={{ position: "absolute", bottom: 2, left: "25%", right: "25%", height: 2, borderRadius: 2, background: `linear-gradient(90deg, ${C.gold}, ${C.blueLt})` }} />
                 )}
@@ -704,6 +705,9 @@ function BookingPage() {
   const [promoResult, setPromoResult] = useState<{ valid: boolean; label?: string; discountCents?: number; error?: string } | null>(null);
   const [promoLoading, setPromoLoading] = useState(false);
   const [availableSlots, setAvailableSlots] = useState<string[]>(ALL_TIME_SLOTS);
+  const [giftCardInput, setGiftCardInput] = useState("");
+  const [giftCardResult, setGiftCardResult] = useState<{ valid: boolean; balanceCents?: number; error?: string } | null>(null);
+  const [giftCardLoading, setGiftCardLoading] = useState(false);
 
   const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   const DAYS = ["Su","Mo","Tu","We","Th","Fr","Sa"];
@@ -735,8 +739,9 @@ function BookingPage() {
   const addonTotal = addons.reduce((s,a) => s + (addonPrices[a]||0), 0);
   const subtotalCents = (basePrice + addonTotal) * 100;
   const discountCents = promoResult?.valid ? (promoResult.discountCents || 0) : 0;
-  const totalCents = Math.max(0, subtotalCents - discountCents);
-  const totalEst = basePrice ? `$${(totalCents / 100).toFixed(0)}` : "--";
+  const giftCardCents = giftCardResult?.valid ? Math.min(giftCardResult.balanceCents || 0, Math.max(0, subtotalCents - discountCents)) : 0;
+  const totalCents = Math.max(0, subtotalCents - discountCents - giftCardCents);
+  const totalEst = basePrice ? `${(totalCents / 100).toFixed(0)}` : "--";
 
   // Validate promo code
   const handlePromoApply = async () => {
@@ -754,6 +759,24 @@ function BookingPage() {
       setPromoResult({ valid: false, error: "Failed to validate code" });
     }
     setPromoLoading(false);
+  };
+
+  // Validate gift card code (check balance, no redemption yet)
+  const handleGiftCardApply = async () => {
+    if (!giftCardInput.trim()) return;
+    setGiftCardLoading(true);
+    try {
+      const res = await fetch("/api/gift-cards/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: giftCardInput }),
+      });
+      const data = await res.json();
+      setGiftCardResult(data);
+    } catch {
+      setGiftCardResult({ valid: false, error: "Failed to validate gift card" });
+    }
+    setGiftCardLoading(false);
   };
 
   async function handleConfirm() {
@@ -792,6 +815,19 @@ function BookingPage() {
         console.error("[Booking save error]", bookingData.error);
       }
 
+      // Redeem gift card after booking is saved
+      if (giftCardResult?.valid && giftCardCents > 0) {
+        try {
+          await fetch("/api/gift-cards/validate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code: giftCardInput, redeemCents: giftCardCents }),
+          });
+        } catch (err) {
+          console.error("[Gift card redeem error]", err);
+        }
+      }
+
       const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
       const bookingId = bookingData.booking?.id || "unknown";
 
@@ -816,6 +852,7 @@ function BookingPage() {
               <tr><td style="padding:7px 0; border-bottom:1px solid #1C2029; color:#5A6374; font-size:11px;">Address</td><td style="padding:7px 0; border-bottom:1px solid #1C2029;">${form.address}</td></tr>
               ${addons.length ? `<tr><td style="padding:7px 0; border-bottom:1px solid #1C2029; color:#5A6374; font-size:11px;">Add-ons</td><td style="padding:7px 0; border-bottom:1px solid #1C2029;">${addons.join(", ")}</td></tr>` : ""}
               ${promoResult?.valid ? `<tr><td style="padding:7px 0; border-bottom:1px solid #1C2029; color:#5A6374; font-size:11px;">Promo</td><td style="padding:7px 0; border-bottom:1px solid #1C2029; color:#3DBB8A;">${promoResult.label}</td></tr>` : ""}
+              ${giftCardResult?.valid && giftCardCents > 0 ? `<tr><td style="padding:7px 0; border-bottom:1px solid #1C2029; color:#5A6374; font-size:11px;">Gift Card</td><td style="padding:7px 0; border-bottom:1px solid #1C2029; color:#DDBE66;">-${((giftCardCents)/100).toFixed(0)} (${giftCardInput})</td></tr>` : ""}
               <tr><td style="padding:7px 0; border-bottom:1px solid #1C2029; color:#5A6374; font-size:11px;">Estimated Total</td><td style="padding:7px 0; border-bottom:1px solid #1C2029; font-weight:800; font-size:15px;">${totalEst}</td></tr>
               <tr><td style="padding:7px 0; border-bottom:1px solid #1C2029; color:#5A6374; font-size:11px;">Ref</td><td style="padding:7px 0; border-bottom:1px solid #1C2029;">${bookRef}</td></tr>
               <tr><td style="padding:7px 0; color:#5A6374; font-size:11px;">Payment</td><td style="padding:7px 0;">Card, cash, PayPal, or Venmo -- collected after your appointment.</td></tr>
@@ -851,6 +888,7 @@ function BookingPage() {
               <tr><td style="padding:5px 0; color:#5A6374; font-size:11px;">Address</td><td style="padding:5px 0;">${form.address}</td></tr>
               ${addons.length ? `<tr><td style="padding:5px 0; color:#5A6374; font-size:11px;">Add-ons</td><td style="padding:5px 0;">${addons.join(", ")}</td></tr>` : ""}
               ${promoResult?.valid ? `<tr><td style="padding:5px 0; color:#5A6374; font-size:11px;">Promo</td><td style="padding:5px 0; color:#3DBB8A;">${promoResult.label}</td></tr>` : ""}
+              ${giftCardResult?.valid && giftCardCents > 0 ? `<tr><td style="padding:5px 0; color:#5A6374; font-size:11px;">Gift Card</td><td style="padding:5px 0; color:#DDBE66;">-${((giftCardCents)/100).toFixed(0)} (${giftCardInput})</td></tr>` : ""}
               <tr><td style="padding:5px 0; color:#5A6374; font-size:11px;">Estimated Total</td><td style="padding:5px 0; font-weight:800; font-size:14px;">${totalEst}</td></tr>
               ${form.notes ? `<tr><td style="padding:5px 0; color:#5A6374; font-size:11px;">Notes</td><td style="padding:5px 0;">${form.notes}</td></tr>` : ""}
             </table>
@@ -1099,6 +1137,36 @@ function BookingPage() {
                 )}
               </div>
 
+              {/* Gift Card */}
+              <div style={{
+                background: C.gold + "06",
+                border: `1px solid ${C.gold}20`,
+                borderRadius:5, padding:14, marginBottom:22,
+              }}>
+                <h4 style={{ fontFamily:"'Outfit',sans-serif", fontWeight:600, fontSize:10, color:C.gold, margin:"0 0 8px", letterSpacing:0.8, textTransform:"uppercase" as const }}>Gift Card</h4>
+                <div style={{ display:"flex", gap:6 }}>
+                  <input value={giftCardInput} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setGiftCardInput(e.target.value.toUpperCase()); setGiftCardResult(null); }} placeholder="BB-XXXX-XXXX" style={{
+                    flex:1, padding:"9px 12px", borderRadius:4,
+                    background:C.bg, border:`1px solid ${C.border}`,
+                    color:C.white, fontSize:13, fontFamily:"'Outfit',sans-serif",
+                    boxSizing:"border-box", outline:"none", textTransform:"uppercase" as const,
+                  }} />
+                  <Btn onClick={handleGiftCardApply} disabled={!giftCardInput.trim() || giftCardLoading} variant="gold" size="md">
+                    {giftCardLoading ? "..." : "Check"}
+                  </Btn>
+                </div>
+                {giftCardResult && giftCardResult.valid && (
+                  <div style={{ marginTop:7, color:C.gold, fontSize:11, fontWeight:600, display:"flex", alignItems:"center", gap:4 }}>
+                    <span style={{ display:"flex" }}><IconCheck /></span> Balance: ${((giftCardResult.balanceCents||0)/100).toFixed(0)} — will apply ${(giftCardCents/100).toFixed(0)} to this booking
+                  </div>
+                )}
+                {giftCardResult && !giftCardResult.valid && (
+                  <div style={{ marginTop:7, color:C.red, fontSize:11, fontWeight:600 }}>
+                    {giftCardResult.error || "Invalid gift card"}
+                  </div>
+                )}
+              </div>
+
               <div style={{ display:"flex", gap:8 }}>
                 <Btn onClick={() => setStep(2)} variant="ghost" size="md" style={{ flex:1 }}>Back</Btn>
                 <Btn onClick={() => setStep(4)} disabled={!can3} variant="gold" size="md" style={{ flex:2 }}>Review Booking</Btn>
@@ -1135,7 +1203,8 @@ function BookingPage() {
                     ["Phone", form.phone],
                     ["Email", form.email],
                     ...(addons.length ? [["Add-ons", addons.join(", ")]] : []),
-                    ...(promoResult?.valid ? [["Promo", `${promoResult.label} (-$${((discountCents)/100).toFixed(0)})`]] : []),
+                    ...(promoResult?.valid ? [["Promo", `${promoResult.label} (-${((discountCents)/100).toFixed(0)})`]] : []),
+                    ...(giftCardResult?.valid && giftCardCents > 0 ? [["Gift Card", `-${(giftCardCents/100).toFixed(0)} (${giftCardInput})`]] : []),
                     ["Estimated Total", totalEst],
                     ["Payment", "After appointment (card/cash/PayPal/Venmo)"],
                   ].map(([k,v]) => (
@@ -1195,6 +1264,142 @@ function BookingPage() {
   );
 }
 
+// ── GIFT CARDS PAGE ──────────────────────────────────────────────
+function GiftCardPage({ setPage }: { setPage: (p: string) => void }) {
+  const [amount, setAmount] = useState(50);
+  const [purchaserName, setPurchaserName] = useState("");
+  const [recipientName, setRecipientName] = useState("");
+  const [recipientEmail, setRecipientEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [purchased, setPurchased] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const presets = [25, 50, 100, 150, 200, 250];
+
+  const handlePurchase = async () => {
+    if (amount < 5) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/gift-cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amountCents: amount * 100, purchaserName, recipientName, recipientEmail, message }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setPurchased(data.card);
+        if (recipientEmail) {
+          const html = `
+            <div style="font-family:'Outfit',sans-serif; max-width:480px; margin:0 auto; background:#11151E; padding:32px; border-radius:12px; border:1px solid #1C2029;">
+              <h2 style="color:#D4A24E; font-weight:700; font-size:22px;">Your BlueBay Gift Card</h2>
+              <p style="color:#8B92A0; font-size:14px;">Hi ${recipientName || "there"},</p>
+              <p style="color:#8B92A0; font-size:14px;">${purchaserName ? purchaserName : "Someone"} has sent you a <strong style="color:#fff">${amount}</strong> gift card for BlueBay Auto Care.</p>
+              <div style="background:#0B0E14; border:1px solid #D4A24E30; border-radius:8px; padding:20px; text-align:center; margin:20px 0;">
+                <div style="color:#D4A24E; font-size:11px; font-weight:600; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;">Your Code</div>
+                <div style="color:#fff; font-size:24px; font-weight:700; letter-spacing:3px; font-family:monospace;">${data.card.code}</div>
+                <div style="color:#8B92A0; font-size:12px; margin-top:8px;">Value: ${amount}</div>
+              </div>
+              ${message ? `<p style="color:#8B92A0; font-size:13px; font-style:italic; border-left:3px solid #D4A24E30; padding-left:12px;">"${message}"</p>` : ""}
+              <p style="color:#8B92A0; font-size:13px; margin-top:20px;">Use this code at checkout when booking your next detail.</p>
+              <a href="https://bluebayautocare.com" style="display:inline-block; background:#D4A24E; color:#0B0E14; font-weight:700; font-size:14px; padding:12px 28px; border-radius:6px; text-decoration:none; margin-top:16px;">Book Now</a>
+            </div>`;
+          await fetch("/api/send-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ toEmail: recipientEmail, toName: recipientName || "Valued Customer", subject: `Your BlueBay Gift Card - ${amount}`, html }),
+          });
+        }
+      }
+    } catch (err) {
+      console.error("[Gift card purchase error]", err);
+    }
+    setLoading(false);
+  };
+
+  if (purchased) {
+    return (
+      <div style={{ paddingTop:64, background:C.bg, minHeight:"100vh" }}>
+        <div style={{ padding:"72px 24px 80px" }}>
+          <div style={{ maxWidth:520, margin:"0 auto" }}>
+            <motion.div initial={{ opacity:0, scale:0.96 }} animate={{ opacity:1, scale:1 }} transition={{ duration:0.5, ease:EASE }}>
+              <Card glass style={{ padding:40, textAlign:"center" }}>
+                <div style={{ width:56, height:56, borderRadius:"50%", background:C.gold+"14", border:`1px solid ${C.gold}30`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 20px", color:C.gold, boxShadow:"0 12px 30px -12px rgba(212,162,78,0.5)" }}>
+                  <IconCheck />
+                </div>
+                <h3 style={{ fontFamily:C.display, fontWeight:600, color:C.gold, fontSize:22, marginBottom:6 }}>Gift Card Purchased</h3>
+                <p style={{ color:C.dim, fontSize:13, marginBottom:24 }}>Your gift card code is ready{recipientEmail ? " and has been emailed to the recipient" : ""}.</p>
+                <div style={{ background:C.bg, border:`1px solid ${C.gold}30`, borderRadius:8, padding:24, margin:"0 0 24px" }}>
+                  <div style={{ color:C.gold, fontSize:10, fontWeight:600, letterSpacing:1, textTransform:"uppercase" as const, marginBottom:8 }}>Code</div>
+                  <div style={{ color:C.white, fontSize:28, fontWeight:700, letterSpacing:3, fontFamily:"monospace" }}>{purchased.code}</div>
+                  <div style={{ color:C.dim, fontSize:13, marginTop:8 }}>Value: ${((purchased.amountCents)/100).toFixed(0)}</div>
+                </div>
+                <div style={{ display:"flex", gap:8 }}>
+                  <Btn onClick={() => { setPurchased(null); setAmount(50); setPurchaserName(""); setRecipientName(""); setRecipientEmail(""); setMessage(""); }} variant="ghost" size="md" style={{ flex:1 }}>Buy Another</Btn>
+                  <Btn onClick={() => setPage("Booking")} variant="gold" size="md" style={{ flex:1 }}>Book a Detail</Btn>
+                </div>
+              </Card>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ paddingTop:64, background:C.bg, minHeight:"100vh" }}>
+      <div style={{ padding:"72px 24px 80px" }}>
+        <div style={{ maxWidth:560, margin:"0 auto" }}>
+          <Reveal>
+            <SectionTitle chip="Gift Cards" title={"Give the gift\nof a clean car."} sub="Perfect for birthdays, holidays, or just because. Recipients can apply the code at checkout." />
+          </Reveal>
+          <Reveal delay={0.1}>
+            <Card glass style={{ padding:32 }}>
+              <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
+                <div>
+                  <label style={{ fontSize:10, fontWeight:600, color:C.dim, letterSpacing:0.8, textTransform:"uppercase" as const, display:"block", marginBottom:10 }}>Amount</label>
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8 }}>
+                    {presets.map(preset => (
+                      <button key={preset} onClick={() => setAmount(preset)} style={{
+                        padding:"12px 0", borderRadius:6, cursor:"pointer",
+                        fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:16,
+                        background: amount === preset ? C.gold : C.bg,
+                        color: amount === preset ? "#0B0E14" : C.muted,
+                        border: amount === preset ? `1px solid ${C.gold}` : `1px solid ${C.border}`,
+                        transition:"all 0.15s",
+                      }}>${preset}</button>
+                    ))}
+                  </div>
+                  <div style={{ marginTop:8, display:"flex", alignItems:"center", gap:8 }}>
+                    <span style={{ fontSize:11, color:C.dim, fontWeight:600, letterSpacing:0.8, textTransform:"uppercase" as const }}>Custom:</span>
+                    <div style={{ display:"flex", alignItems:"center", gap:2 }}>
+                      <span style={{ color:C.gold, fontWeight:700, fontSize:15 }}>$</span>
+                      <input type="number" min={5} value={amount} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAmount(Math.max(5, parseInt(e.target.value) || 5))} style={{
+                        width:70, padding:"6px 8px", borderRadius:4,
+                        background:C.bg, border:`1px solid ${C.border}`,
+                        color:C.white, fontSize:14, fontFamily:"'Outfit',sans-serif",
+                        outline:"none",
+                      }} />
+                    </div>
+                  </div>
+                </div>
+                <Input label="Your Name" placeholder="John Smith" value={purchaserName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPurchaserName(e.target.value)} />
+                <Input label="Recipient Name" placeholder="Jane Smith" value={recipientName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRecipientName(e.target.value)} />
+                <Input label="Recipient Email" type="email" placeholder="jane@email.com" value={recipientEmail} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRecipientEmail(e.target.value)} />
+                <Textarea label="Personal Message (optional)" value={message} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setMessage(e.target.value)} />
+                <Btn onClick={handlePurchase} disabled={loading || amount < 5} variant="gold" size="lg" style={{ width:"100%" }}>
+                  {loading ? "Processing..." : `Purchase ${amount} Gift Card`}
+                </Btn>
+                <p style={{ textAlign:"center", color:C.dim, fontSize:11, margin:0 }}>
+                  The recipient will receive an email with the code and your message.
+                </p>
+              </div>
+            </Card>
+          </Reveal>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── LOYALTY PAGE ─────────────────────────────────────────────────
 function LoyaltyPage({ setPage }: { setPage: (p: string) => void }) {
   const tierColors = [C.muted, C.gold, C.blueLt];
@@ -1235,14 +1440,18 @@ function LoyaltyPage({ setPage }: { setPage: (p: string) => void }) {
 function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [pin, setPin] = useState("");
-  const [tab, setTab] = useState<"bookings"|"promos"|"blocked">("bookings");
+  const [tab, setTab] = useState<"bookings"|"promos"|"blocked"|"giftcards">("bookings");
   const [bookings, setBookings] = useState<any[]>([]);
   const [promos, setPromos] = useState<any[]>([]);
   const [blocked, setBlocked] = useState<any[]>([]);
+  const [giftCards, setGiftCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   // New promo form
   const [newPromo, setNewPromo] = useState({ code:"", label:"", discount:"", type:"fixed", maxUses:"", expiresAt:"" });
+
+  // New gift card form
+  const [newGiftCard, setNewGiftCard] = useState({ amountCents:"", purchaserName:"", recipientName:"", recipientEmail:"" });
 
   // New blocked time form
   const [newBlocked, setNewBlocked] = useState({ dateIso:"", timeSlot:"", reason:"" });
@@ -1257,17 +1466,20 @@ function AdminPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [bRes, pRes, blRes] = await Promise.all([
+      const [bRes, pRes, blRes, gcRes] = await Promise.all([
         fetch("/api/bookings"),
         fetch("/api/promo-codes"),
         fetch("/api/blocked-times"),
+        fetch("/api/gift-cards"),
       ]);
       const bData = await bRes.json();
       const pData = await pRes.json();
       const blData = await blRes.json();
+      const gcData = await gcRes.json();
       setBookings(bData.bookings || []);
       setPromos(pData.codes || []);
       setBlocked(blData.blocked || []);
+      setGiftCards(gcData.cards || []);
     } catch (err) {
       console.error("[Admin load error]", err);
     }
@@ -1353,6 +1565,37 @@ function AdminPage() {
     loadData();
   };
 
+  const handleCreateGiftCard = async () => {
+    const amt = parseInt(newGiftCard.amountCents);
+    if (!amt || amt < 5) return;
+    await fetch("/api/gift-cards", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amountCents: amt * 100,
+        purchaserName: newGiftCard.purchaserName,
+        recipientName: newGiftCard.recipientName,
+        recipientEmail: newGiftCard.recipientEmail,
+      }),
+    });
+    setNewGiftCard({ amountCents:"", purchaserName:"", recipientName:"", recipientEmail:"" });
+    loadData();
+  };
+
+  const handleToggleGiftCard = async (gc: any) => {
+    await fetch(`/api/gift-cards/${gc.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active: gc.status === "active" ? false : true }),
+    });
+    loadData();
+  };
+
+  const handleDeleteGiftCard = async (id: string) => {
+    await fetch(`/api/gift-cards/${id}`, { method: "DELETE" });
+    loadData();
+  };
+
   const handleCreateBlocked = async () => {
     if (!newBlocked.dateIso) return;
     await fetch("/api/blocked-times", {
@@ -1396,7 +1639,7 @@ function AdminPage() {
 
           {/* Tabs */}
           <div style={{ display:"flex", gap:3, marginBottom:24 }}>
-            {([["bookings","Bookings"],["promos","Promo Codes"],["blocked","Blocked Times"]] as const).map(([id, label]) => (
+            {([["bookings","Bookings"],["promos","Promo Codes"],["giftcards","Gift Cards"],["blocked","Blocked Times"]] as const).map(([id, label]) => (
               <button key={id} onClick={() => setTab(id)} style={{
                 padding:"9px 20px", borderRadius:4, cursor:"pointer",
                 fontFamily:"'Outfit',sans-serif", fontWeight:600, fontSize:12,
@@ -1522,6 +1765,47 @@ function AdminPage() {
                           <span style={{ color:C.dim, fontSize:10 }}>{p.usedCount}/{p.maxUses || "inf"} used</span>
                           {!p.active && <Chip color={C.red}>INACTIVE</Chip>}
                           <Btn onClick={() => handleDeletePromo(p.id)} variant="danger" size="xs">Delete</Btn>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* GIFT CARDS TAB */}
+          {tab==="giftcards" && (
+            <div>
+              <Card style={{ padding:18, marginBottom:16 }}>
+                <h4 style={{ fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:14, color:C.white, marginBottom:12 }}>Create Gift Card</h4>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr auto", gap:8, alignItems:"end" }}>
+                  <Input label="Amount ($USD)" placeholder="50" value={newGiftCard.amountCents} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewGiftCard({...newGiftCard, amountCents:e.target.value})} />
+                  <Input label="Purchaser" placeholder="John Smith" value={newGiftCard.purchaserName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewGiftCard({...newGiftCard, purchaserName:e.target.value})} />
+                  <Input label="Recipient" placeholder="Jane Smith" value={newGiftCard.recipientName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewGiftCard({...newGiftCard, recipientName:e.target.value})} />
+                  <Input label="Recipient Email" placeholder="jane@email.com" value={newGiftCard.recipientEmail} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewGiftCard({...newGiftCard, recipientEmail:e.target.value})} />
+                  <Btn onClick={handleCreateGiftCard} variant="gold" size="md">Create</Btn>
+                </div>
+              </Card>
+              {giftCards.length === 0 ? (
+                <Card style={{ padding:36, textAlign:"center" }}>
+                  <p style={{ color:C.dim, fontSize:14 }}>No gift cards yet.</p>
+                </Card>
+              ) : (
+                <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                  {giftCards.map(gc => (
+                    <Card key={gc.id} style={{ padding:12 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                        <div>
+                          <span style={{ fontFamily:"'Outfit',sans-serif", fontWeight:700, color:C.gold, fontSize:14, marginRight:8 }}>{gc.code}</span>
+                          <span style={{ color:C.dim, fontSize:11 }}>{gc.purchaserName || "--"} → {gc.recipientName || "--"}</span>
+                        </div>
+                        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                          <span style={{ color:C.white, fontWeight:600, fontSize:12 }}>${((gc.balanceCents)/100).toFixed(0)}</span>
+                          <span style={{ color:C.dim, fontSize:10 }}>of ${((gc.amountCents)/100).toFixed(0)}</span>
+                          {gc.status !== "active" && <Chip color={C.red}>{gc.status === "exhausted" ? "USED" : "INACTIVE"}</Chip>}
+                          <Btn onClick={() => handleToggleGiftCard(gc)} variant="ghost" size="xs">{gc.status === "active" ? "Disable" : "Enable"}</Btn>
+                          <Btn onClick={() => handleDeleteGiftCard(gc.id)} variant="danger" size="xs">Delete</Btn>
                         </div>
                       </div>
                     </Card>
@@ -1696,8 +1980,8 @@ function Footer({ setPage }: { setPage: (p: string) => void }) {
         </div>
         <div>
           <h4 style={{ fontFamily:"'Outfit',sans-serif", fontWeight:600, color:C.white, fontSize:11, marginBottom:14, letterSpacing:1, textTransform:"uppercase" as const }}>Pages</h4>
-          {[...["Home","Services","Booking","Loyalty","Contact"], "Admin"].map(l => (
-            <button key={l} onClick={() => { setPage(l); window.scrollTo(0,0); }} className="bb-navlink" style={{ display:"block", background:"none", border:"none", cursor:"pointer", color: l === "Admin" ? C.subtle : C.muted, fontSize:l === "Admin" ? 11 : 13, fontFamily:"'Outfit',sans-serif", fontWeight:400, padding:"3px 0", transition:"color 0.2s", borderRadius:4 }}>{l}</button>
+          {[...["Home","Services","Booking","GiftCards","Loyalty","Contact"], "Admin"].map(l => (
+            <button key={l} onClick={() => { setPage(l); window.scrollTo(0,0); }} className="bb-navlink" style={{ display:"block", background:"none", border:"none", cursor:"pointer", color: l === "Admin" ? C.subtle : C.muted, fontSize:l === "Admin" ? 11 : 13, fontFamily:"'Outfit',sans-serif", fontWeight:400, padding:"3px 0", transition:"color 0.2s", borderRadius:4 }}>{l === "GiftCards" ? "Gift Cards" : l}</button>
           ))}
         </div>
         <div>
@@ -1733,6 +2017,7 @@ export default function App() {
       {page === "Home"     && <HomePage    setPage={go} />}
       {page === "Services" && <ServicesPage setPage={go} />}
       {page === "Booking"  && <BookingPage />}
+      {page === "GiftCards" && <GiftCardPage setPage={go} />}
       {page === "Loyalty"  && <LoyaltyPage  setPage={go} />}
       {page === "Admin"    && <AdminPage />}
       {page === "Contact"  && <ContactPage />}
