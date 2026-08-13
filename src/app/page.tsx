@@ -1566,18 +1566,55 @@ function AdminPage() {
   };
 
   const handleCreateGiftCard = async () => {
-    const amt = parseInt(newGiftCard.amountCents);
-    if (!amt || amt < 5) return;
-    await fetch("/api/gift-cards", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        amountCents: amt * 100,
-        purchaserName: newGiftCard.purchaserName,
-        recipientName: newGiftCard.recipientName,
-        recipientEmail: newGiftCard.recipientEmail,
-      }),
-    });
+    const cleanAmount = newGiftCard.amountCents.replace(/[^0-9.]/g, '');
+    const amt = parseInt(cleanAmount);
+    if (!amt || amt < 5) {
+      alert("Please enter a valid amount (minimum $5).");
+      return;
+    }
+    try {
+      const res = await fetch("/api/gift-cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amountCents: amt * 100,
+          purchaserName: newGiftCard.purchaserName,
+          recipientName: newGiftCard.recipientName,
+          recipientEmail: newGiftCard.recipientEmail,
+        }),
+      });
+      const data = await res.json();
+
+      if (data.ok && newGiftCard.recipientEmail) {
+        const html = `
+          <div style="font-family:'Outfit',sans-serif; max-width:480px; margin:0 auto; background:#11151E; padding:32px; border-radius:12px; border:1px solid #1C2029;">
+            <h2 style="color:#D4A24E; font-weight:700; font-size:22px;">Your BlueBay Gift Card</h2>
+            <p style="color:#8B92A0; font-size:14px;">Hi ${newGiftCard.recipientName || "there"},</p>
+            <p style="color:#8B92A0; font-size:14px;">${newGiftCard.purchaserName ? newGiftCard.purchaserName : "Someone"} has sent you a <strong style="color:#fff">$${amt}</strong> gift card for BlueBay Auto Care.</p>
+            <div style="background:#0B0E14; border:1px solid #D4A24E30; border-radius:8px; padding:20px; text-align:center; margin:20px 0;">
+              <div style="color:#D4A24E; font-size:11px; font-weight:600; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;">Your Code</div>
+              <div style="color:#fff; font-size:24px; font-weight:700; letter-spacing:3px; font-family:monospace;">${data.card.code}</div>
+              <div style="color:#8B92A0; font-size:12px; margin-top:8px;">Value: $${amt}</div>
+            </div>
+            <p style="color:#8B92A0; font-size:13px; margin-top:20px;">Use this code at checkout when booking your next detail.</p>
+            <a href="https://bluebayautocare.com" style="display:inline-block; background:#D4A24E; color:#0B0E14; font-weight:700; font-size:14px; padding:12px 28px; border-radius:6px; text-decoration:none; margin-top:16px;">Book Now</a>
+          </div>`;
+
+        await fetch("/api/send-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            toEmail: newGiftCard.recipientEmail,
+            toName: newGiftCard.recipientName || "Valued Customer",
+            subject: `Your BlueBay Gift Card - ${amt}`,
+            html
+          }),
+        });
+      }
+    } catch (err) {
+      console.error("[Admin gift card purchase error]", err);
+    }
+
     setNewGiftCard({ amountCents:"", purchaserName:"", recipientName:"", recipientEmail:"" });
     loadData();
   };
