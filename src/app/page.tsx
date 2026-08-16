@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Reveal, StaggerGroup, StaggerItem, Counter, TiltCard, ScrollProgress, Parallax } from "@/lib/motion";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { EASE } from "@/lib/motion";
 
 /* ─────────────────────────────────────────────────────────────
@@ -159,6 +159,22 @@ function IconStar({ filled }: { filled: boolean }) {
   return (
     <svg width="13" height="13" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </svg>
+  );
+}
+
+function CarSilhouette({ style }: { style?: React.CSSProperties }) {
+  return (
+    <svg viewBox="0 0 1024 384" style={{ width: "100%", height: "100%", ...style }} preserveAspectRatio="xMidYMid meet">
+      <path
+        d="M239.5,229.5c0,27.6-22.4,50-50,50s-50-22.4-50-50s22.4-50,50-50S239.5,201.9,239.5,229.5z M834.5,229.5
+        c0,27.6-22.4,50-50,50s-50-22.4-50-50s22.4-50,50-50S834.5,201.9,834.5,229.5z M961.5,190.5v19h-52.6
+        c-10.4-33.8-41.9-58.5-79.4-58.5s-69,24.7-79.4,58.5H273.9c-10.4-33.8-41.9-58.5-79.4-58.5c-37.5,0-69,24.7-79.4,58.5H62.5v-27
+        c0-11,9-20,20-20h64.7l46.2-74h538.7l54.8,74h154.6C952.5,162.5,961.5,171.5,961.5,190.5z M320.5,115.5l-33.7,54h450.4l-40-54
+        H320.5z"
+        fill="currentColor"
+        opacity={0.03}
+      />
     </svg>
   );
 }
@@ -353,6 +369,9 @@ function Navbar({ page, setPage }: { page: string; setPage: (p: string) => void 
 
 // ── HOME PAGE ────────────────────────────────────────────────────
 function HomePage({ setPage }: { setPage: (p: string) => void }) {
+  const { scrollY } = useScroll();
+  const carX = useTransform(scrollY, [0, 1000], [0, 300]);
+
   return (
     <div>
       {/* HERO */}
@@ -368,6 +387,11 @@ function HomePage({ setPage }: { setPage: (p: string) => void }) {
         <Parallax speed={0.4}>
           <div className="bb-float" style={{ position: "absolute", bottom: "12%", left: "6%", width: 260, height: 260, borderRadius: "50%", background: "radial-gradient(circle, rgba(201,168,76,0.14), transparent 70%)", filter: "blur(28px)", animationDelay: "-3s" }} />
         </Parallax>
+
+        {/* Animated Background Car Silhouette */}
+        <motion.div style={{ position: "absolute", bottom: "5%", left: "-10%", width: "80%", maxWidth: 800, color: C.white, zIndex: 0, x: carX, opacity: 0.8, pointerEvents: "none" }}>
+          <CarSilhouette />
+        </motion.div>
 
         <div style={{ maxWidth: 1140, margin: "0 auto", padding: "120px 24px 80px", position: "relative", zIndex: 1, width: "100%" }}>
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE }}>
