@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Reveal, StaggerGroup, StaggerItem, Counter, TiltCard, ScrollProgress, Parallax } from "@/lib/motion";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { EASE } from "@/lib/motion";
 
 /* ─────────────────────────────────────────────────────────────
@@ -51,13 +51,6 @@ const VEHICLE_TYPES = [
 const ALL_TIME_SLOTS = [
   "8:00 AM","9:00 AM","10:00 AM","11:00 AM",
   "12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM",
-];
-
-const TESTIMONIALS = [
-  { name: "Jessica Lin", vehicle: "Tesla Model 3 Owner", stars: 5, text: "Best mobile detailing in SF. They came to my office and my Tesla looked brand new when they finished. Very professional and great attention to detail." },
-  { name: "Marcus T.", vehicle: "BMW X5 Owner", stars: 5, text: "Gold package on my SUV -- absolutely worth every penny. They showed up on time, were super thorough, and the whole process was seamless." },
-  { name: "Priya S.", vehicle: "Honda Accord Owner", stars: 5, text: "I've tried a few mobile detailing services in SF and BlueBay is by far the best. Eco-friendly products, no water waste, and the results speak for themselves." },
-  { name: "Derek W.", vehicle: "Ford F-150 Owner", stars: 5, text: "They came to my driveway in the Marina, did the Platinum package on my truck. Looks better than the day I bought it." },
 ];
 
 const LOYALTY_TIERS = [
@@ -166,6 +159,22 @@ function IconStar({ filled }: { filled: boolean }) {
   return (
     <svg width="13" height="13" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </svg>
+  );
+}
+
+function CarSilhouette({ style }: { style?: React.CSSProperties }) {
+  return (
+    <svg viewBox="0 0 1024 384" style={{ width: "100%", height: "100%", ...style }} preserveAspectRatio="xMidYMid meet">
+      <path
+        d="M239.5,229.5c0,27.6-22.4,50-50,50s-50-22.4-50-50s22.4-50,50-50S239.5,201.9,239.5,229.5z M834.5,229.5
+        c0,27.6-22.4,50-50,50s-50-22.4-50-50s22.4-50,50-50S834.5,201.9,834.5,229.5z M961.5,190.5v19h-52.6
+        c-10.4-33.8-41.9-58.5-79.4-58.5s-69,24.7-79.4,58.5H273.9c-10.4-33.8-41.9-58.5-79.4-58.5c-37.5,0-69,24.7-79.4,58.5H62.5v-27
+        c0-11,9-20,20-20h64.7l46.2-74h538.7l54.8,74h154.6C952.5,162.5,961.5,171.5,961.5,190.5z M320.5,115.5l-33.7,54h450.4l-40-54
+        H320.5z"
+        fill="currentColor"
+        opacity={0.03}
+      />
     </svg>
   );
 }
@@ -359,42 +368,10 @@ function Navbar({ page, setPage }: { page: string; setPage: (p: string) => void 
 }
 
 // ── HOME PAGE ────────────────────────────────────────────────────
-function TestimonialCarousel() {
-  const [i, setI] = useState(0);
-  const t = TESTIMONIALS[i];
-  return (
-    <Card glass style={{ padding: 32, overflow: "hidden" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-        <Stars n={t.stars} />
-        <span style={{ fontSize: 11, color: C.dim, letterSpacing: 0.5 }}>{i + 1} / {TESTIMONIALS.length}</span>
-      </div>
-      <AnimatePresence mode="wait">
-        <motion.blockquote
-          key={i}
-          initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.4, ease: EASE }}
-          style={{ margin: 0, padding: 0 }}
-        >
-          <p style={{ color: C.white, fontSize: 16, lineHeight: 1.65, margin: "0 0 20px", fontFamily: C.display, fontStyle: "italic", fontWeight: 500 }}>
-            &ldquo;{t.text}&rdquo;
-          </p>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div>
-              <div style={{ fontWeight: 600, color: C.blueLt, fontSize: 13 }}>{t.name}</div>
-              <div style={{ color: C.dim, fontSize: 12 }}>{t.vehicle}</div>
-            </div>
-            <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={() => setI((i - 1 + TESTIMONIALS.length) % TESTIMONIALS.length)} style={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 999, width: 34, height: 34, cursor: "pointer", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center" }}><IconChevronLeft /></button>
-              <button onClick={() => setI((i + 1) % TESTIMONIALS.length)} style={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 999, width: 34, height: 34, cursor: "pointer", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center" }}><IconChevronRight /></button>
-            </div>
-          </div>
-        </motion.blockquote>
-      </AnimatePresence>
-    </Card>
-  );
-}
-
 function HomePage({ setPage }: { setPage: (p: string) => void }) {
+  const { scrollY } = useScroll();
+  const carX = useTransform(scrollY, [0, 1000], [0, 300]);
+
   return (
     <div>
       {/* HERO */}
@@ -410,6 +387,11 @@ function HomePage({ setPage }: { setPage: (p: string) => void }) {
         <Parallax speed={0.4}>
           <div className="bb-float" style={{ position: "absolute", bottom: "12%", left: "6%", width: 260, height: 260, borderRadius: "50%", background: "radial-gradient(circle, rgba(201,168,76,0.14), transparent 70%)", filter: "blur(28px)", animationDelay: "-3s" }} />
         </Parallax>
+
+        {/* Animated Background Car Silhouette */}
+        <motion.div style={{ position: "absolute", bottom: "5%", left: "-10%", width: "80%", maxWidth: 800, color: C.white, zIndex: 0, x: carX, opacity: 0.8, pointerEvents: "none" }}>
+          <CarSilhouette />
+        </motion.div>
 
         <div style={{ maxWidth: 1140, margin: "0 auto", padding: "120px 24px 80px", position: "relative", zIndex: 1, width: "100%" }}>
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE }}>
@@ -446,12 +428,11 @@ function HomePage({ setPage }: { setPage: (p: string) => void }) {
           {/* Animated stats row */}
           <StaggerGroup stagger={0.12} style={{ display: "flex", gap: 0, flexWrap: "wrap" }}>
             {[
-              { stat: <Counter to={500} suffix="+" />, label: "Cars detailed" },
               { stat: <Counter to={4.9} decimals={1} suffix="★" />, label: "Average rating" },
               { stat: <Counter to={100} suffix="%" />, label: "Mobile service" },
               { stat: <Counter to={0} suffix="gal" />, label: "Water wasted" },
             ].map(({ stat, label }, i) => (
-              <StaggerItem key={label} style={{ flex: "1 1 140px", minWidth: 140, padding: "20px 0", borderTop: `1px solid ${C.border}`, borderRight: i < 3 ? `1px solid ${C.border}` : "none" }}>
+              <StaggerItem key={label} style={{ flex: "1 1 140px", minWidth: 140, padding: "20px 0", borderTop: `1px solid ${C.border}`, borderRight: i < 2 ? `1px solid ${C.border}` : "none" }}>
                 <div style={{ fontFamily: C.display, fontWeight: 600, fontSize: "clamp(26px,3.5vw,40px)", color: C.white, lineHeight: 1, marginBottom: 6, letterSpacing: -0.5 }}>{stat}</div>
                 <div style={{ color: C.dim, fontSize: 12, letterSpacing: 0.3, textTransform: "uppercase" as const }}>{label}</div>
               </StaggerItem>
@@ -543,7 +524,7 @@ function HomePage({ setPage }: { setPage: (p: string) => void }) {
         <Parallax speed={0.3}>
           <div style={{ position: "absolute", top: "-10%", right: "-5%", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(74,138,244,0.08), transparent 70%)", filter: "blur(40px)" }} />
         </Parallax>
-        <div style={{ maxWidth: 1140, margin: "0 auto", display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 64, alignItems: "center", position: "relative", zIndex: 1 }}>
+        <div style={{ margin: "0 auto", display: "grid", maxWidth: 700, gap: 64, alignItems: "center", position: "relative", zIndex: 1 }}>
           <div>
             <Reveal>
               <SectionTitle chip="Why BlueBay" title={"The detail your car\nremembers."} sub="We bring a full detailing studio to your block — no driving, no waiting rooms, no water running down the gutter." center={false} />
@@ -572,11 +553,6 @@ function HomePage({ setPage }: { setPage: (p: string) => void }) {
               ))}
             </StaggerGroup>
           </div>
-
-          {/* Testimonial carousel */}
-          <Reveal delay={0.15}>
-            <TestimonialCarousel />
-          </Reveal>
         </div>
       </div>
 
