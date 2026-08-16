@@ -53,13 +53,6 @@ const ALL_TIME_SLOTS = [
   "12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM",
 ];
 
-const TESTIMONIALS = [
-  { name: "Jessica Lin", vehicle: "Tesla Model 3 Owner", stars: 5, text: "Best mobile detailing in SF. They came to my office and my Tesla looked brand new when they finished. Very professional and great attention to detail." },
-  { name: "Marcus T.", vehicle: "BMW X5 Owner", stars: 5, text: "Gold package on my SUV -- absolutely worth every penny. They showed up on time, were super thorough, and the whole process was seamless." },
-  { name: "Priya S.", vehicle: "Honda Accord Owner", stars: 5, text: "I've tried a few mobile detailing services in SF and BlueBay is by far the best. Eco-friendly products, no water waste, and the results speak for themselves." },
-  { name: "Derek W.", vehicle: "Ford F-150 Owner", stars: 5, text: "They came to my driveway in the Marina, did the Platinum package on my truck. Looks better than the day I bought it." },
-];
-
 const LOYALTY_TIERS = [
   { name: "Wash & Go", min: 0,   max: 199,  perks: ["Earn 1 point per $1 spent","Birthday bonus points","Appointment reminders"] },
   { name: "Shine Club", min: 200, max: 499,  perks: ["Everything in Wash & Go","5% off every booking","Priority scheduling","Free add-on after 5 visits"] },
@@ -359,41 +352,6 @@ function Navbar({ page, setPage }: { page: string; setPage: (p: string) => void 
 }
 
 // ── HOME PAGE ────────────────────────────────────────────────────
-function TestimonialCarousel() {
-  const [i, setI] = useState(0);
-  const t = TESTIMONIALS[i];
-  return (
-    <Card glass style={{ padding: 32, overflow: "hidden" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-        <Stars n={t.stars} />
-        <span style={{ fontSize: 11, color: C.dim, letterSpacing: 0.5 }}>{i + 1} / {TESTIMONIALS.length}</span>
-      </div>
-      <AnimatePresence mode="wait">
-        <motion.blockquote
-          key={i}
-          initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.4, ease: EASE }}
-          style={{ margin: 0, padding: 0 }}
-        >
-          <p style={{ color: C.white, fontSize: 16, lineHeight: 1.65, margin: "0 0 20px", fontFamily: C.display, fontStyle: "italic", fontWeight: 500 }}>
-            &ldquo;{t.text}&rdquo;
-          </p>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div>
-              <div style={{ fontWeight: 600, color: C.blueLt, fontSize: 13 }}>{t.name}</div>
-              <div style={{ color: C.dim, fontSize: 12 }}>{t.vehicle}</div>
-            </div>
-            <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={() => setI((i - 1 + TESTIMONIALS.length) % TESTIMONIALS.length)} style={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 999, width: 34, height: 34, cursor: "pointer", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center" }}><IconChevronLeft /></button>
-              <button onClick={() => setI((i + 1) % TESTIMONIALS.length)} style={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 999, width: 34, height: 34, cursor: "pointer", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center" }}><IconChevronRight /></button>
-            </div>
-          </div>
-        </motion.blockquote>
-      </AnimatePresence>
-    </Card>
-  );
-}
-
 function HomePage({ setPage }: { setPage: (p: string) => void }) {
   return (
     <div>
@@ -446,12 +404,11 @@ function HomePage({ setPage }: { setPage: (p: string) => void }) {
           {/* Animated stats row */}
           <StaggerGroup stagger={0.12} style={{ display: "flex", gap: 0, flexWrap: "wrap" }}>
             {[
-              { stat: <Counter to={500} suffix="+" />, label: "Cars detailed" },
               { stat: <Counter to={4.9} decimals={1} suffix="★" />, label: "Average rating" },
               { stat: <Counter to={100} suffix="%" />, label: "Mobile service" },
               { stat: <Counter to={0} suffix="gal" />, label: "Water wasted" },
             ].map(({ stat, label }, i) => (
-              <StaggerItem key={label} style={{ flex: "1 1 140px", minWidth: 140, padding: "20px 0", borderTop: `1px solid ${C.border}`, borderRight: i < 3 ? `1px solid ${C.border}` : "none" }}>
+              <StaggerItem key={label} style={{ flex: "1 1 140px", minWidth: 140, padding: "20px 0", borderTop: `1px solid ${C.border}`, borderRight: i < 2 ? `1px solid ${C.border}` : "none" }}>
                 <div style={{ fontFamily: C.display, fontWeight: 600, fontSize: "clamp(26px,3.5vw,40px)", color: C.white, lineHeight: 1, marginBottom: 6, letterSpacing: -0.5 }}>{stat}</div>
                 <div style={{ color: C.dim, fontSize: 12, letterSpacing: 0.3, textTransform: "uppercase" as const }}>{label}</div>
               </StaggerItem>
@@ -543,7 +500,7 @@ function HomePage({ setPage }: { setPage: (p: string) => void }) {
         <Parallax speed={0.3}>
           <div style={{ position: "absolute", top: "-10%", right: "-5%", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(74,138,244,0.08), transparent 70%)", filter: "blur(40px)" }} />
         </Parallax>
-        <div style={{ maxWidth: 1140, margin: "0 auto", display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 64, alignItems: "center", position: "relative", zIndex: 1 }}>
+        <div style={{ margin: "0 auto", display: "grid", maxWidth: 700, gap: 64, alignItems: "center", position: "relative", zIndex: 1 }}>
           <div>
             <Reveal>
               <SectionTitle chip="Why BlueBay" title={"The detail your car\nremembers."} sub="We bring a full detailing studio to your block — no driving, no waiting rooms, no water running down the gutter." center={false} />
@@ -572,11 +529,6 @@ function HomePage({ setPage }: { setPage: (p: string) => void }) {
               ))}
             </StaggerGroup>
           </div>
-
-          {/* Testimonial carousel */}
-          <Reveal delay={0.15}>
-            <TestimonialCarousel />
-          </Reveal>
         </div>
       </div>
 
