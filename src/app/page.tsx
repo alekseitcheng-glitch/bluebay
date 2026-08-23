@@ -298,99 +298,101 @@ function FeatureIcon({ children, color }: { children: React.ReactNode; color?: s
 
 // ── NAVBAR ───────────────────────────────────────────────────────
 function Navbar({ page, setPage }: { page: string; setPage: (p: string) => void }) {
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const h = () => setScrolled(window.scrollY > 30);
-    window.addEventListener("scroll", h);
-    return () => window.removeEventListener("scroll", h);
-  }, []);
-
   const links = ["Home","Services","Booking","GiftCards","Loyalty","Contact"];
   return (
-    <nav style={{
-      position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000,
-      background: scrolled ? "rgba(9,12,20,0.72)" : "transparent",
-      borderBottom: scrolled ? `1px solid ${C.border}` : "1px solid transparent",
-      backdropFilter: scrolled ? "blur(16px) saturate(140%)" : "none",
-      transition: "background 0.3s ease, border-color 0.3s ease",
-    }}>
-      <div style={{ maxWidth: 1140, margin: "0 auto", padding: "0 24px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <motion.div
-          initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, ease: EASE }}
-          onClick={() => setPage("Home")} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}
-        >
-          <img src="/logo.png" alt="BlueBay Auto Care" style={{ width: 34, height: 34, borderRadius: 8, filter: "drop-shadow(0 4px 12px rgba(74,138,244,0.35))" }} />
-          <div>
-            <div style={{ fontFamily: C.display, fontWeight: 700, fontSize: 17, color: C.white, lineHeight: 1, letterSpacing: 0 }}>BlueBay</div>
-            <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 500, fontSize: 8, color: C.dim, letterSpacing: 3, textTransform: "uppercase" as const }}>AUTO CARE</div>
-          </div>
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, ease: EASE, delay: 0.1 }}
-          style={{ display: "flex", alignItems: "center", gap: 2 }}
-        >
-          {links.map(l => {
-            const active = page === l;
-            const label = l === "GiftCards" ? "Gift Cards" : l;
-            return (
-              <button key={l} onClick={() => setPage(l)} style={{
-                background: "none", border: "none", cursor: "pointer",
-                fontFamily: "'Outfit',sans-serif", fontWeight: active ? 600 : 400,
-                fontSize: 13, letterSpacing: 0.1,
-                color: active ? C.white : C.muted,
-                padding: "8px 14px", borderRadius: 8,
-                position: "relative",
-                transition: "color 0.2s ease",
-              }} className="bb-navlink">
-                {label}
-                {active && (
-                  <motion.div layoutId="nav-underline" style={{ position: "absolute", bottom: 2, left: "25%", right: "25%", height: 2, borderRadius: 2, background: `linear-gradient(90deg, ${C.gold}, ${C.blueLt})` }} />
-                )}
-              </button>
-            );
-          })}
-          <Btn href="tel:+14157028468" variant="gold" size="sm" style={{ marginLeft: 14 }}>
-            (415) 702-8468
-          </Btn>
-        </motion.div>
-      </div>
-    </nav>
+    <>
+      <motion.div
+        initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, ease: EASE }}
+        onClick={() => setPage("Home")} style={{ position: "absolute", top: 24, left: 24, zIndex: 1001, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}
+      >
+        <img src="/logo.png" alt="BlueBay Auto Care" style={{ width: 34, height: 34, borderRadius: 8, filter: "drop-shadow(0 4px 12px rgba(74,138,244,0.35))" }} />
+        <div>
+          <div style={{ fontFamily: C.display, fontWeight: 700, fontSize: 17, color: C.white, lineHeight: 1, letterSpacing: 0 }}>BlueBay</div>
+          <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 500, fontSize: 8, color: C.dim, letterSpacing: 3, textTransform: "uppercase" as const }}>AUTO CARE</div>
+        </div>
+      </motion.div>
+      <nav style={{
+        position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 1000,
+        background: "rgba(15,18,25,0.85)",
+        border: `1px solid ${C.border}`,
+        borderRadius: 999,
+        backdropFilter: "blur(16px) saturate(140%)",
+        padding: "8px 12px",
+        boxShadow: "0 20px 40px -10px rgba(0,0,0,0.8)",
+        display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 6, alignItems: "center",
+        width: "90vw", maxWidth: 600,
+      }}>
+        {links.map(l => {
+          const active = page === l;
+          const label = l === "GiftCards" ? "Gift Cards" : l;
+          return (
+            <button key={l} onClick={() => setPage(l)} style={{
+              background: active ? "rgba(255,255,255,0.06)" : "transparent",
+              border: "none", cursor: "pointer",
+              fontFamily: "'Outfit',sans-serif", fontWeight: active ? 600 : 400,
+              fontSize: 13, letterSpacing: 0.1,
+              color: active ? C.white : C.muted,
+              padding: "8px 14px", borderRadius: 999,
+              position: "relative",
+              transition: "all 0.2s ease",
+            }} className="bb-navlink">
+              {label}
+              {active && (
+                <motion.div layoutId="nav-bg" style={{ position: "absolute", inset: 0, borderRadius: 999, border: `1px solid rgba(255,255,255,0.1)` }} />
+              )}
+            </button>
+          );
+        })}
+        <div style={{ width: 1, height: 24, background: C.border, margin: "0 6px", flexShrink: 0 }} />
+        <Btn onClick={() => setPage("Booking")} variant="gold" size="sm" style={{ borderRadius: 999, padding: "8px 16px" }}>
+          Book
+        </Btn>
+      </nav>
+    </>
   );
 }
 
 // ── HOME PAGE ────────────────────────────────────────────────────
-function TestimonialCarousel() {
-  const [i, setI] = useState(0);
-  const t = TESTIMONIALS[i];
+function TestimonialCluster() {
   return (
-    <Card glass style={{ padding: 32, overflow: "hidden" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-        <Stars n={t.stars} />
-        <span style={{ fontSize: 11, color: C.dim, letterSpacing: 0.5 }}>{i + 1} / {TESTIMONIALS.length}</span>
-      </div>
-      <AnimatePresence mode="wait">
-        <motion.blockquote
-          key={i}
-          initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.4, ease: EASE }}
-          style={{ margin: 0, padding: 0 }}
-        >
-          <p style={{ color: C.white, fontSize: 16, lineHeight: 1.65, margin: "0 0 20px", fontFamily: C.display, fontStyle: "italic", fontWeight: 500 }}>
-            &ldquo;{t.text}&rdquo;
-          </p>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+    <div style={{ position: "relative", height: 380, width: "100%", maxWidth: 500, margin: "0 auto" }}>
+      {TESTIMONIALS.slice(0, 3).map((t, i) => {
+        // Asymmetric staggered rotation and positioning
+        const rotates = ["-4deg", "2deg", "-1deg"];
+        const lefts = ["0%", "15%", "5%"];
+        const tops = ["0%", "20%", "45%"];
+        const zIndexes = [1, 2, 3];
+        return (
+          <Card
+            key={i}
+            glass
+            style={{
+              position: "absolute",
+              left: lefts[i],
+              top: tops[i],
+              zIndex: zIndexes[i],
+              width: "85%",
+              transform: `rotate(${rotates[i]})`,
+              padding: 24,
+              boxShadow: "0 20px 40px -15px rgba(0,0,0,0.8)",
+              border: `1px solid rgba(255,255,255,0.08)`,
+              backdropFilter: "blur(12px)",
+            }}
+          >
+            <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
+              <Stars n={t.stars} />
+            </div>
+            <p style={{ color: C.white, fontSize: 14, lineHeight: 1.6, margin: "0 0 16px", fontStyle: "italic" }}>
+              &ldquo;{t.text}&rdquo;
+            </p>
             <div>
-              <div style={{ fontWeight: 600, color: C.blueLt, fontSize: 13 }}>{t.name}</div>
-              <div style={{ color: C.dim, fontSize: 12 }}>{t.vehicle}</div>
+              <div style={{ fontWeight: 600, color: C.blueLt, fontSize: 12 }}>{t.name}</div>
+              <div style={{ color: C.dim, fontSize: 11 }}>{t.vehicle}</div>
             </div>
-            <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={() => setI((i - 1 + TESTIMONIALS.length) % TESTIMONIALS.length)} style={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 999, width: 34, height: 34, cursor: "pointer", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center" }}><IconChevronLeft /></button>
-              <button onClick={() => setI((i + 1) % TESTIMONIALS.length)} style={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 999, width: 34, height: 34, cursor: "pointer", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center" }}><IconChevronRight /></button>
-            </div>
-          </div>
-        </motion.blockquote>
-      </AnimatePresence>
-    </Card>
+          </Card>
+        );
+      })}
+    </div>
   );
 }
 
@@ -399,49 +401,53 @@ function HomePage({ setPage }: { setPage: (p: string) => void }) {
     <div>
       {/* HERO */}
       <div className="bb-grain" style={{
-        minHeight: "100vh", position: "relative", overflow: "hidden",
+        minHeight: "95vh", position: "relative", overflow: "hidden",
         background: `radial-gradient(1100px 600px at 78% 12%, rgba(74,138,244,0.16), transparent 60%), radial-gradient(900px 500px at 12% 80%, rgba(201,168,76,0.10), transparent 55%), ${C.bg}`,
         display: "flex", alignItems: "center",
       }}>
-        {/* Floating decorative orbs (parallax) */}
         <Parallax speed={0.25}>
-          <div className="bb-float" style={{ position: "absolute", top: "16%", right: "8%", width: 220, height: 220, borderRadius: "50%", background: "radial-gradient(circle, rgba(74,138,244,0.22), transparent 70%)", filter: "blur(20px)" }} />
-        </Parallax>
-        <Parallax speed={0.4}>
-          <div className="bb-float" style={{ position: "absolute", bottom: "12%", left: "6%", width: 260, height: 260, borderRadius: "50%", background: "radial-gradient(circle, rgba(201,168,76,0.14), transparent 70%)", filter: "blur(28px)", animationDelay: "-3s" }} />
+          <div className="bb-float" style={{ position: "absolute", top: "10%", right: "15%", width: 320, height: 320, borderRadius: "50%", background: "radial-gradient(circle, rgba(74,138,244,0.22), transparent 70%)", filter: "blur(30px)" }} />
         </Parallax>
 
-        <div style={{ maxWidth: 1140, margin: "0 auto", padding: "120px 24px 80px", position: "relative", zIndex: 1, width: "100%" }}>
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE }}>
-            <Chip color={C.blue} style={{ marginBottom: 24 }}>San Francisco · Mobile Detailing</Chip>
-          </motion.div>
+        <div className="grid-responsive-hero" style={{ width: "100%", maxWidth: 1400, margin: "0 auto", padding: "120px 24px 80px", display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 60, alignItems: "center", position: "relative", zIndex: 1 }}>
+          <div>
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE }}>
+              <div style={{ display: "inline-block", padding: "6px 2px", borderLeft: `2px solid ${C.blue}`, marginBottom: 24, paddingLeft: 12 }}>
+                <span style={{ color: C.blue, fontSize: 11, fontWeight: 600, letterSpacing: 1.5, textTransform: "uppercase" }}>San Francisco · Mobile Detailing</span>
+              </div>
+            </motion.div>
 
-          <motion.h1
-            initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: EASE, delay: 0.08 }}
-            style={{
-              fontFamily: C.display, fontWeight: 600,
-              fontSize: "clamp(42px,7vw,84px)", color: C.white,
-              lineHeight: 1.02, margin: "0 0 24px", letterSpacing: -1.5, maxWidth: 820,
-            }}
-          >
-            Detailing that meets you{" "}
-            <span style={{ fontStyle: "italic", fontWeight: 500 }} className="bb-gradient-text">where you park.</span>
-          </motion.h1>
+            <motion.h1
+              initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: EASE, delay: 0.08 }}
+              style={{
+                fontFamily: C.display, fontWeight: 600,
+                fontSize: "clamp(52px, 8vw, 96px)", color: C.white,
+                lineHeight: 0.95, margin: "0 0 32px", letterSpacing: -2,
+              }}
+            >
+              Detailing that <br />meets you <br />
+              <span style={{ fontStyle: "italic", fontWeight: 500 }} className="bb-gradient-text">where you park.</span>
+            </motion.h1>
 
-          <motion.p
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: EASE, delay: 0.2 }}
-            style={{ color: C.muted, fontSize: 18, lineHeight: 1.65, marginBottom: 36, maxWidth: 540 }}
-          >
-            Premium hand detailing brought to your home, office, or curbside across San Francisco. Eco-friendly products, zero water waste, and results you can see in the reflection.
-          </motion.p>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: EASE, delay: 0.2 }}
+              style={{ color: C.muted, fontSize: 18, lineHeight: 1.65, marginBottom: 48, maxWidth: 480, paddingLeft: 24, borderLeft: `1px solid rgba(255,255,255,0.1)` }}
+            >
+              Premium hand detailing brought to your home, office, or curbside across San Francisco. Eco-friendly products, zero water waste, and results you can see in the reflection.
+            </motion.p>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: EASE, delay: 0.32 }}
-            style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 56 }}
-          >
-            <Btn onClick={() => setPage("Booking")} variant="gold" size="lg">Book your detail</Btn>
-            <Btn href="tel:+14157028468" variant="outline" size="lg">(415) 702-8468</Btn>
-          </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: EASE, delay: 0.32 }}
+              style={{ display: "flex", flexDirection: "column", gap: 16, alignItems: "flex-start" }}
+            >
+              <Btn onClick={() => setPage("Booking")} variant="gold" size="lg" style={{ minWidth: 240, justifyContent: "center" }}>Book your detail</Btn>
+              <Btn href="tel:+14157028468" variant="outline" size="lg" style={{ marginLeft: 32, minWidth: 240, justifyContent: "center", borderStyle: "dashed" }}>(415) 702-8468</Btn>
+            </motion.div>
+          </div>
+
+          <Reveal delay={0.2} className="testimonial-cluster-mobile">
+            <TestimonialCluster />
+          </Reveal>
 
           {/* Animated stats row */}
           <StaggerGroup stagger={0.12} style={{ display: "flex", gap: 0, flexWrap: "wrap" }}>
@@ -475,12 +481,12 @@ function HomePage({ setPage }: { setPage: (p: string) => void }) {
           <Reveal>
             <SectionTitle chip="Packages" title={"Three tiers of shine"} sub="From a refresh to a full transformation — pick the level of care your car deserves." />
           </Reveal>
-          <StaggerGroup stagger={0.12} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 18 }}>
+          <StaggerGroup stagger={0.12} className="grid-responsive-packages" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gridAutoFlow: "dense", gap: 18 }}>
             {PACKAGES.map(pkg => (
-              <StaggerItem key={pkg.id}>
+              <StaggerItem key={pkg.id} style={{ gridColumn: pkg.id === "gold" ? "1 / -1" : "auto" }}>
                 <TiltCard style={{ height: "100%" }} max={5}>
-                  <Card style={{
-                    padding: 0, overflow: "hidden", position: "relative", height: "100%",
+                  <Card className={pkg.id === "gold" ? "gold-package-card" : ""} style={{
+                    padding: 0, overflow: "hidden", position: "relative", height: "100%", display: pkg.id === "gold" ? "flex" : "block",
                     border: pkg.id === "gold" ? `1px solid ${pkg.accent}50` : `1px solid ${C.border}`,
                     boxShadow: pkg.id === "gold" ? C.glowGold : C.shadow,
                   }} glass={false}>
@@ -493,10 +499,10 @@ function HomePage({ setPage }: { setPage: (p: string) => void }) {
                         border: `1px solid ${pkg.accent}40`,
                       }}>{pkg.badge}</div>
                     )}
-                    <div style={{ padding: "28px 26px 0", borderBottom: `1px solid ${C.border}` }}>
+                    <div style={{ padding: "28px 26px", borderBottom: pkg.id === "gold" ? "none" : `1px solid ${C.border}`, borderRight: pkg.id === "gold" ? `1px solid ${C.border}` : "none", flex: 1 }}>
                       <div style={{ fontFamily: C.display, fontWeight: 600, fontSize: 26, color: pkg.accent, letterSpacing: -0.5 }}>{pkg.tier}</div>
                       <div style={{ color: C.dim, fontSize: 13, marginBottom: 18 }}>{pkg.sub}</div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 22 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                         {VEHICLE_TYPES.map(v => (
                           <div key={v.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <span style={{ color: C.muted, fontSize: 13 }}>{v.label}</span>
@@ -505,7 +511,7 @@ function HomePage({ setPage }: { setPage: (p: string) => void }) {
                         ))}
                       </div>
                     </div>
-                    <div style={{ padding: "20px 26px 26px" }}>
+                    <div style={{ padding: "20px 26px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                       <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 9 }}>
                         {pkg.features.map(f => (
                           <li key={f} style={{ display: "flex", gap: 9, alignItems: "flex-start", color: C.muted, fontSize: 13, lineHeight: 1.45 }}>
@@ -543,40 +549,36 @@ function HomePage({ setPage }: { setPage: (p: string) => void }) {
         <Parallax speed={0.3}>
           <div style={{ position: "absolute", top: "-10%", right: "-5%", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(74,138,244,0.08), transparent 70%)", filter: "blur(40px)" }} />
         </Parallax>
-        <div style={{ maxWidth: 1140, margin: "0 auto", display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 64, alignItems: "center", position: "relative", zIndex: 1 }}>
-          <div>
+        <div style={{ maxWidth: 1140, margin: "0 auto", position: "relative", zIndex: 1 }}>
+          <div style={{ maxWidth: 640, margin: "0 auto", textAlign: "center" }}>
             <Reveal>
-              <SectionTitle chip="Why BlueBay" title={"The detail your car\nremembers."} sub="We bring a full detailing studio to your block — no driving, no waiting rooms, no water running down the gutter." center={false} />
+              <SectionTitle chip="Why BlueBay" title={"The detail your car\nremembers."} sub="We bring a full detailing studio to your block — no driving, no waiting rooms, no water running down the gutter." />
             </Reveal>
-            <Reveal delay={0.1} style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 32 }}>
+            <Reveal delay={0.1} style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, marginBottom: 48 }}>
               {["Premium Products", "Mobile Service", "Eco-Friendly", "Pay After Service"].map(t => (
                 <Chip key={t} color={C.blue}>{t}</Chip>
               ))}
             </Reveal>
-            <StaggerGroup stagger={0.1} style={{ display: "flex", flexDirection: "column", gap: 22 }}>
-              {[
-                { icon: <IconShield />, t: "Trained, insured detailers", d: "Every vehicle is handled by someone who treats it like their own. Careful, thorough, on time." },
-                { icon: <IconLeaf />, t: "Waterless & eco-friendly", d: "Our products lift grime without a hose. Better for your paint, better for the Bay." },
-                { icon: <IconClock />, t: "Built around your day", d: "Home, office, or curbside — book a window that fits your schedule, not ours." },
-                { icon: <IconStar filled />, t: "Results, guaranteed", d: "If it's not right, we'll make it right. Your satisfaction is the whole point." },
-              ].map(({ icon, t, d }) => (
-                <StaggerItem key={t}>
-                  <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-                    <FeatureIcon>{icon}</FeatureIcon>
-                    <div>
-                      <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 600, color: C.white, fontSize: 14, marginBottom: 3 }}>{t}</div>
-                      <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.6 }}>{d}</div>
-                    </div>
-                  </div>
-                </StaggerItem>
-              ))}
-            </StaggerGroup>
           </div>
 
-          {/* Testimonial carousel */}
-          <Reveal delay={0.15}>
-            <TestimonialCarousel />
-          </Reveal>
+          <StaggerGroup stagger={0.1} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 32 }}>
+            {[
+              { icon: <IconShield />, t: "Trained, insured detailers", d: "Every vehicle is handled by someone who treats it like their own. Careful, thorough, on time." },
+              { icon: <IconLeaf />, t: "Waterless & eco-friendly", d: "Our products lift grime without a hose. Better for your paint, better for the Bay." },
+              { icon: <IconClock />, t: "Built around your day", d: "Home, office, or curbside — book a window that fits your schedule, not ours." },
+              { icon: <IconStar filled />, t: "Results, guaranteed", d: "If it's not right, we'll make it right. Your satisfaction is the whole point." },
+            ].map(({ icon, t, d }) => (
+              <StaggerItem key={t}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14, alignItems: "flex-start", padding: 24, background: "rgba(255,255,255,0.02)", borderRadius: 16, border: `1px solid ${C.border}` }}>
+                  <FeatureIcon>{icon}</FeatureIcon>
+                  <div>
+                    <div style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 600, color: C.white, fontSize: 16, marginBottom: 6 }}>{t}</div>
+                    <div style={{ color: C.muted, fontSize: 14, lineHeight: 1.6 }}>{d}</div>
+                  </div>
+                </div>
+              </StaggerItem>
+            ))}
+          </StaggerGroup>
         </div>
       </div>
 

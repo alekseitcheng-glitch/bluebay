@@ -192,3 +192,25 @@ a { cursor: pointer; }
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
   .bb-float { animation: none !important; }
 }
+
+/* Responsive Grid Utilities */
+@media (max-width: 768px) {
+  .grid-responsive-hero {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+  .grid-responsive-packages {
+    grid-template-columns: 1fr !important;
+  }
+  /* Force the Gold package to single column on mobile */
+  .grid-responsive-packages > div {
+    grid-column: 1 / -1 !important;
+  }
+  /* Show testimonials correctly on mobile */
+  .testimonial-cluster-mobile {
+    display: none;
+  }
+  .gold-package-card {
+    flex-direction: column !important;
+  }
+}
