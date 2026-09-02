@@ -53,13 +53,6 @@ const ALL_TIME_SLOTS = [
   "12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM",
 ];
 
-const TESTIMONIALS = [
-  { name: "Jessica Lin", vehicle: "Tesla Model 3 Owner", stars: 5, text: "Best mobile detailing in SF. They came to my office and my Tesla looked brand new when they finished. Very professional and great attention to detail." },
-  { name: "Marcus T.", vehicle: "BMW X5 Owner", stars: 5, text: "Gold package on my SUV -- absolutely worth every penny. They showed up on time, were super thorough, and the whole process was seamless." },
-  { name: "Priya S.", vehicle: "Honda Accord Owner", stars: 5, text: "I've tried a few mobile detailing services in SF and BlueBay is by far the best. Eco-friendly products, no water waste, and the results speak for themselves." },
-  { name: "Derek W.", vehicle: "Ford F-150 Owner", stars: 5, text: "They came to my driveway in the Marina, did the Platinum package on my truck. Looks better than the day I bought it." },
-];
-
 const LOYALTY_TIERS = [
   { name: "Wash & Go", min: 0,   max: 199,  perks: ["Earn 1 point per $1 spent","Birthday bonus points","Appointment reminders"] },
   { name: "Shine Club", min: 200, max: 499,  perks: ["Everything in Wash & Go","5% off every booking","Priority scheduling","Free add-on after 5 visits"] },
@@ -353,49 +346,6 @@ function Navbar({ page, setPage }: { page: string; setPage: (p: string) => void 
 }
 
 // ── HOME PAGE ────────────────────────────────────────────────────
-function TestimonialCluster() {
-  return (
-    <div style={{ position: "relative", height: 380, width: "100%", maxWidth: 500, margin: "0 auto" }}>
-      {TESTIMONIALS.slice(0, 3).map((t, i) => {
-        // Asymmetric staggered rotation and positioning
-        const rotates = ["-4deg", "2deg", "-1deg"];
-        const lefts = ["0%", "15%", "5%"];
-        const tops = ["0%", "20%", "45%"];
-        const zIndexes = [1, 2, 3];
-        return (
-          <Card
-            key={i}
-            glass
-            style={{
-              position: "absolute",
-              left: lefts[i],
-              top: tops[i],
-              zIndex: zIndexes[i],
-              width: "85%",
-              transform: `rotate(${rotates[i]})`,
-              padding: 24,
-              boxShadow: "0 20px 40px -15px rgba(0,0,0,0.8)",
-              border: `1px solid rgba(255,255,255,0.08)`,
-              backdropFilter: "blur(12px)",
-            }}
-          >
-            <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
-              <Stars n={t.stars} />
-            </div>
-            <p style={{ color: C.white, fontSize: 14, lineHeight: 1.6, margin: "0 0 16px", fontStyle: "italic" }}>
-              &ldquo;{t.text}&rdquo;
-            </p>
-            <div>
-              <div style={{ fontWeight: 600, color: C.blueLt, fontSize: 12 }}>{t.name}</div>
-              <div style={{ color: C.dim, fontSize: 11 }}>{t.vehicle}</div>
-            </div>
-          </Card>
-        );
-      })}
-    </div>
-  );
-}
-
 function HomePage({ setPage }: { setPage: (p: string) => void }) {
   return (
     <div>
@@ -409,8 +359,8 @@ function HomePage({ setPage }: { setPage: (p: string) => void }) {
           <div className="bb-float" style={{ position: "absolute", top: "10%", right: "15%", width: 320, height: 320, borderRadius: "50%", background: "radial-gradient(circle, rgba(74,138,244,0.22), transparent 70%)", filter: "blur(30px)" }} />
         </Parallax>
 
-        <div className="grid-responsive-hero" style={{ width: "100%", maxWidth: 1400, margin: "0 auto", padding: "120px 24px 80px", display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 60, alignItems: "center", position: "relative", zIndex: 1 }}>
-          <div>
+        <div style={{ width: "100%", maxWidth: 1400, margin: "0 auto", padding: "120px 24px 80px", position: "relative", zIndex: 1 }}>
+          <div style={{ maxWidth: 820 }}>
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE }}>
               <div style={{ display: "inline-block", padding: "6px 2px", borderLeft: `2px solid ${C.blue}`, marginBottom: 24, paddingLeft: 12 }}>
                 <span style={{ color: C.blue, fontSize: 11, fontWeight: 600, letterSpacing: 1.5, textTransform: "uppercase" }}>San Francisco · Mobile Detailing</span>
@@ -425,7 +375,7 @@ function HomePage({ setPage }: { setPage: (p: string) => void }) {
                 lineHeight: 0.95, margin: "0 0 32px", letterSpacing: -2,
               }}
             >
-              Detailing that <br />meets you <br />
+              Detailing that meets you <br />
               <span style={{ fontStyle: "italic", fontWeight: 500 }} className="bb-gradient-text">where you park.</span>
             </motion.h1>
 
@@ -438,16 +388,14 @@ function HomePage({ setPage }: { setPage: (p: string) => void }) {
 
             <motion.div
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: EASE, delay: 0.32 }}
-              style={{ display: "flex", flexDirection: "column", gap: 16, alignItems: "flex-start" }}
+              style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}
             >
               <Btn onClick={() => setPage("Booking")} variant="gold" size="lg" style={{ minWidth: 240, justifyContent: "center" }}>Book your detail</Btn>
-              <Btn href="tel:+14157028468" variant="outline" size="lg" style={{ marginLeft: 32, minWidth: 240, justifyContent: "center", borderStyle: "dashed" }}>(415) 702-8468</Btn>
+              <Btn href="tel:+14157028468" variant="outline" size="lg" style={{ minWidth: 240, justifyContent: "center", borderStyle: "dashed" }}>(415) 702-8468</Btn>
             </motion.div>
           </div>
 
-          <Reveal delay={0.2} className="testimonial-cluster-mobile">
-            <TestimonialCluster />
-          </Reveal>
+          <div style={{ marginTop: 80 }}></div>
 
           {/* Animated stats row */}
           <StaggerGroup stagger={0.12} style={{ display: "flex", gap: 0, flexWrap: "wrap" }}>
